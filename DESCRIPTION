@@ -1,0 +1,31 @@
+Package: survey.admin
+Title: Manage Limesurvey surveys with a shiny application
+Version: 0.0.0.9000
+Authors@R: person('Stéphane', 'Le Hénanff', email = 'github@le-henanff.fr', role = c('cre', 'aut'))
+Description: Manage one or several Limesurvey surveys throught a shiny application.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    shiny,
+    golem,
+    DT,
+    glue,
+    htmltools,
+    mRpostman,
+    rclipboard,
+    RCurl,
+    rhandsontable,
+    shinyalert,
+    shinydashboard,
+    shinydashboardPlus,
+    tippy
+RoxygenNote: 7.0.2
+Suggests: 
+    survey.api,
+    testthat
+Remotes:
+    JohnCoene/tippy,
+    stephLH/limer@next,
+    daattali/shinyalert,
+    stephLH/rhandsontable@afterRowMove
