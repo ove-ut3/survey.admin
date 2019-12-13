@@ -194,8 +194,6 @@ mod_sms_sending_server <- function(input, output, session, rv){
         dplyr::filter(key == "api_key_cuttly") %>% 
         dplyr::pull(value)
       
-      browser()
-      
       query <- selected_phones$surveyurl %>% 
         purrr::map(survey.api::cuttly, api_key = api_key)
       

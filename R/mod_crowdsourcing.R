@@ -376,8 +376,6 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     if (!is.null(input$import_mail)) {
       
-      #browser()
-      
       mail_template <- jsonlite::fromJSON(input$import_mail$datapath)
       
       rv$dt_mail_template$value[which(rv$dt_mail_template$key == "sender_email")] <- mail_template$sender_email

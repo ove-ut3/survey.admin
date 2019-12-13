@@ -34,8 +34,6 @@ mod_import_contacts_server <- function(input, output, session, rv){
     
     if (!is.null(input$import_contacts)) {
 
-      #browser()
-      
       import_contacts <- read.csv(input$import_contacts$datapath, na.strings = "") %>% 
         dplyr::semi_join(rv$dt_participants, by = "token")
       
@@ -53,8 +51,6 @@ mod_import_contacts_server <- function(input, output, session, rv){
       )
       
       if (all(c("service", "status", "status_date") %in% names(import_contacts))) {
-        
-        #browser()
         
         rv$dt_email_validation <- import_contacts %>% 
           dplyr::filter(key == "email") %>% 

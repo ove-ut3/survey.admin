@@ -300,8 +300,6 @@ mod_email_validation_server <- function(input, output, session, rv){
         
         for (i in 1:nrow(output)) {
           
-          browser()
-          
           if (i == 1) {
             output$validation[[i]] <- fn_validation(output$email[i], key = api_key, sleep = 0)
           } else {

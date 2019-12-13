@@ -205,8 +205,6 @@ mod_linkedin_server <- function(input, output, session, rv){
     linkedin <- rv$dt_participants_filter() %>%
       dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
     
-    browser()
-    
     event <- dplyr::tibble(
       token = linkedin$token,
       type = "linkedin",
@@ -334,8 +332,6 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     linkedin <- rv$dt_participants_filter() %>%
       dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-    
-    browser()
     
     event <- dplyr::tibble(
       token = linkedin$token,
