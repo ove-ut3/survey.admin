@@ -1,0 +1,47 @@
+.main-header { 
+	position: fixed; width: 100%; 
+}
+
+.sidebar { 
+  position: fixed; width: 220px; 
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.control-sidebar { 
+	position: fixed;
+}
+
+.content { 
+	margin-top: 50px; 
+}
+
+hr {border-top: 1px solid #000000;}
+
+.sidebar-menu .treeview-menu-custom {
+  display: none;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  padding-left: 5px;
+}
+
+.tippy-tooltip {
+  font-size: 1.5rem;
+  padding: 0.3rem 0.6rem;
+}
+
+h3.control-sidebar-heading {
+  margin-top: 0px;
+  padding: 0px;
+}
+
+.shiny-notification {
+  height: 100px;
+  width: 800px;
+  position:fixed;
+  top: calc(50% - 50px);
+  left: calc(50% - 400px);
+  font-size: 200%;
+}
