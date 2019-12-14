@@ -359,9 +359,17 @@ mod_mailing_server <- function(input, output, session, rv){
         
         if (i != 1) Sys.sleep(input$mailing_sleep)
         
-        mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
+        try <- tryCatch(
+          limer::mail_registered_participant(survey_id, tid = tid[i]),
+          error = function(e) e
+        )
         
-        if (stringr::str_detect(mailing$status, "\\d+ left to send$", negate = TRUE)) {
+        if ("error" %in% class(try)) {
+          
+          key <- limer::get_session_key()
+          mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
+          
+        } else if (!stringr::str_detect(try$status, "\\d+ left to send$")) {
           
           key <- limer::get_session_key()
           mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
