@@ -29,9 +29,8 @@ cron_suivi <- function(sqlite_base, output_file = "/home/shiny/cron_suivi.rda") 
     key <- limer::get_session_key()
     
     survey_id <- sqlite_base %>% 
-      impexp::sqlite_import("participants") %>% 
-      dplyr::pull(survey_id) %>% 
-      unique()
+      impexp::sqlite_import("surveys") %>% 
+      dplyr::pull(survey_id)
     
     completed <- survey_id %>% 
       limer::get_responses(session = FALSE) %>%
