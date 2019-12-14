@@ -1,1 +1,1 @@
-survey.admin::cron_suivi(sqlite_base = "/home/shiny/enquete-ip.sqlite")
+survey.admin::cron_responses_rda(sqlite_base = "/home/shiny/enquete-ip.sqlite")

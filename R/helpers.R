@@ -1,11 +1,11 @@
-#' cron_suivi
+#' cron_responses_rda
 #'
 #' @param sqlite_base \dots
 #' @param output_file \dots
 #'
 #' @export
 #' @importFrom dplyr %>%
-cron_suivi <- function(sqlite_base, output_file = "/home/shiny/cron_suivi.rda") {
+cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_responses.rda") {
   
   if (Sys.info()[1] == "Linux") {
     
@@ -63,13 +63,13 @@ cron_suivi <- function(sqlite_base, output_file = "/home/shiny/cron_suivi.rda") 
     
     release <- limer::release_session_key()
     
-    cron_suivi <- participants %>%
+    cron_responses <- participants %>%
       dplyr::full_join(completed, by = c("survey_id", "token")) %>%
       dplyr::full_join(optout, by = c("survey_id", "token")) %>%
       dplyr::full_join(lastpage_rate, by = c("survey_id", "token")) %>% 
       tidyr::replace_na(list(completed = FALSE, optout = FALSE))
     
-    save(cron_suivi, file = output_file, compress = "bzip2")
+    save(cron_responses, file = output_file, compress = "bzip2")
     
   }
   

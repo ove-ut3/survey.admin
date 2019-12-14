@@ -3,7 +3,7 @@
 #' @export
 #' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options
-run_app <- function(sqlite_base, cron_file, credentials) {
+run_app <- function(sqlite_base, cron_responses, credentials) {
   with_golem_options(
     app = shinyApp(
       ui = app_ui(), 
@@ -15,6 +15,6 @@ run_app <- function(sqlite_base, cron_file, credentials) {
         })
       }
     ), 
-    golem_opts = list(sqlite_base = sqlite_base, cron_file = cron_file, credentials = credentials)
+    golem_opts = list(sqlite_base = sqlite_base, cron_responses = cron_responses, credentials = credentials)
   )
 }
