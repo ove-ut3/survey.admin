@@ -129,24 +129,42 @@ mail_delivery_failure <- function(sqlite_base, imap_server, username, password, 
           mRpostman::string("From", "Mail Delivery System"),
           mRpostman::string("From", "postmaster@")
         ),
-        mRpostman::sent_since(format.Date(lubridate::today(), "%d-%b-%Y"))
+      mRpostman::sent_since(format.Date(lubridate::today(), "%d-%b-%Y"))
       )
     )
   
-  emails <- mRpostman::fetch_msg_text(delivery_failure$imapconf, delivery_failure$msg_id) %>% 
-    purrr::map(stringr::str_extract_all, "[a-z0-9\\._%-]+@[a-z0-9\\.-]+\\.[a-z]{2,4}") %>% 
-    purrr::map(1) %>% 
-    purrr::map_chr(head, 1)
+  if (isTRUE(delivery_failure$msg_id != 0)) {
+    
+    emails <- mRpostman::fetch_msg_text(delivery_failure$imapconf, delivery_failure$msg_id) %>% 
+      purrr::map(stringr::str_extract_all, "[a-z0-9\\._%-]+@[a-z0-9\\.-]+\\.[a-z]{2,4}") %>% 
+      purrr::map(1) %>% 
+      purrr::map_chr(head, 1)
+    
+    date <- mRpostman::fetch_msg_header(delivery_failure$imapconf, delivery_failure$msg_id, fields = "Date") %>% 
+      purrr::map_chr(stringr::str_extract, "\\d{1,2} \\w{3} \\d{4}") %>% 
+      lubridate::dmy()
+    
+    impexp::sqlite_execute_sql(
+      sqlite_base,
+      glue::glue("UPDATE email_validation SET service = \"mail delivery failure\" WHERE email = \"{emails}\";")
+    )
+    impexp::sqlite_execute_sql(
+      sqlite_base,
+      glue::glue("UPDATE email_validation SET status = \"invalid\" WHERE email = \"{emails}\";")
+    )
+    impexp::sqlite_execute_sql(
+      sqlite_base,
+      glue::glue("UPDATE email_validation SET date = \"{date}\" WHERE email = \"{emails}\";")
+    )
+    
+    if (delete == TRUE) {
+      mRpostman::delete_msg(delivery_failure$imapconf, delivery_failure$msg_id)
+    }
+    
+  }
   
-  date <- mRpostman::fetch_msg_header(delivery_failure$imapconf, delivery_failure$msg_id, fields = "Date") %>% 
-    purrr::map_chr(stringr::str_extract, "\\d{1,2} \\w{3} \\d{4}") %>% 
-    lubridate::dmy()
-  
-  impexp::sqlite_execute_sql(
-    sqlite_base,
-    glue::glue("UPDATE email_validation SET service = \"mail delivery failure\" WHERE email = \"{emails}\";")
-  )
-  impexp::sqlite_execute_sql(
+}
+
 #' set_finished_almost_complete
 #' 
 #' @param sqlite_base \dots
@@ -157,9 +175,6 @@ set_finished_almost_complete <- function(sqlite_base, almost_complete_group = c(
 
   config_limesurvey <- impexp::sqlite_import(
     sqlite_base,
-    glue::glue("UPDATE email_validation SET status = \"invalid\" WHERE email = \"{emails}\";")
-  )
-  impexp::sqlite_execute_sql(
     "config"
   ) %>% 
     dplyr::filter(stringr::str_detect(key, "^lime_")) %>% 
@@ -383,8 +398,6 @@ pours_etud_perte_reprise <- function(sqlite_base) {
   
   config_limesurvey <- impexp::sqlite_import(
     sqlite_base,
-    glue::glue("UPDATE email_validation SET date = \"{date}\" WHERE email = \"{emails}\";")
-  )
     "config"
   ) %>% 
     dplyr::filter(stringr::str_detect(key, "^lime_")) %>% 
@@ -396,8 +409,6 @@ pours_etud_perte_reprise <- function(sqlite_base) {
   
   key <- limer::get_session_key()
   
-  if (delete == TRUE) {
-    mRpostman::delete_msg(delivery_failure$imapconf, delivery_failure$msg_id)
   survey_id <- sqlite_base %>% 
     impexp::sqlite_import("surveys") %>% 
     dplyr::pull(survey_id)
