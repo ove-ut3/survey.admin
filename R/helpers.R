@@ -42,25 +42,50 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
       dplyr::select(survey_id, token) %>%
       dplyr::mutate(optout = TRUE)
     
-    question_groups_number <- survey_id %>%
-      purrr::map_int(
-        ~ limer::call_limer("list_groups", list("iSurveyID" = .)) %>%
-          dplyr::pull(gid) %>%
-          unique() %>%
-          length()
-      ) %>%
-      dplyr::tibble(groups_number = .) %>%
-      dplyr::mutate(survey_id = !!survey_id)
+    questions <- purrr::map_df(
+        survey_id,
+        ~ limer::call_limer("list_questions", list("iSurveyID" = .)) %>% 
+          dplyr::filter(parent_qid == "0", type != "*") %>% 
+          dplyr::select(survey_id = sid, group_id = gid, title, question_order)
+      ) %>% 
+      dplyr::left_join(
+        purrr::map_df(
+          survey_id,
+          ~ limer::call_limer("list_groups", list("iSurveyID" = .)) %>% 
+            dplyr::select(survey_id = sid, group_id = gid, group_order)
+        ),
+        by = c("survey_id", "group_id")
+      ) %>% 
+      dplyr::mutate_at(c("group_order", "question_order"), as.integer) %>% 
+      dplyr::arrange(survey_id, group_order, question_order) %>% 
+      unique()
+    
+    question_groups_number <- questions %>% 
+      dplyr::group_by(survey_id) %>% 
+      dplyr::summarise(groups_number = max(group_order)) %>% 
+      dplyr::ungroup()
     
     lastpage_rate <- survey_id %>%
       limer::get_responses(sCompletionStatus = "incomplete", session = FALSE) %>%
-      dplyr::select(survey_id, token, lastpage) %>%
-      dplyr::left_join(question_groups_number, by = "survey_id") %>%
-      dplyr::mutate_at("lastpage", dplyr::na_if, 0) %>% 
-      dplyr::mutate_at("lastpage", dplyr::na_if, -1) %>% 
-      dplyr::mutate(lastpage_rate = lastpage / groups_number) %>%
-      dplyr::select(survey_id, token, lastpage_rate)
-    
+      dplyr::mutate_if(is.character, dplyr::na_if, "") %>% 
+      dplyr::select(-c(1:2, 4:5, 7, 9)) %>% 
+      dplyr::mutate(
+        situationProN1 = dplyr::if_else((is.na(emploiN2DateDebut) | is.na(emploiN2TPremierEmp)) & situationProN1 == "A1", NA_character_, situationProN1),
+        situationProN = dplyr::if_else((is.na(emploiN2DateDebut) | is.na(emploiN2TPremierEmp)) & situationProN == "A1", NA_character_, situationProN)
+      ) %>% 
+      tidyr::gather("key", "value", -survey_id, -token, -lastpage, -datestamp, na.rm = TRUE) %>% 
+      dplyr::mutate(key = stringr::str_match(key, "^([^\\.]+)")[, 2]) %>% 
+      dplyr::mutate_at("datestamp", lubridate::ymd_hms) %>% 
+      dplyr::inner_join(questions, by = c("survey_id", "key" = "title")) %>% 
+      dplyr::arrange(token, group_order, question_order) %>% 
+      dplyr::group_by(token, survey_id) %>% 
+      dplyr::filter(dplyr::row_number() == dplyr::n()) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::left_join(question_groups_number, by = "survey_id") %>% 
+      dplyr::mutate(max_page = purrr::map2_int(lastpage, group_order, ~ max(.x, .y))) %>% 
+      dplyr::mutate(lastpage_rate = max_page / groups_number) %>%
+      dplyr::select(survey_id, token, datestamp, lastpage_rate)
+
     release <- limer::release_session_key()
     
     cron_responses <- participants %>%
