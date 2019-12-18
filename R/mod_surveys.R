@@ -283,7 +283,5 @@ mod_surveys_server <- function(input, output, session, rv){
       )
     
   })
-  
-  return(rv)
 
 }

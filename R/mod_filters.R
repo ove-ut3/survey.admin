@@ -167,6 +167,5 @@ mod_filters_server <- function(input, output, session, rv){
   })
   
   rv$filter_inputs <- input
-  
-  return(rv)
-}
+
+  }

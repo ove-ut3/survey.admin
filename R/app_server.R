@@ -11,7 +11,7 @@ app_server <- function(input, output, session) {
   
   rv <- reactiveValues()
   
-  rv <- callModule(mod_init_sqlite_server, "init_sqlite_ui", rv)
+  callModule(mod_init_sqlite_server, "init_sqlite_ui", rv)
   
   config <- impexp::sqlite_import(
     golem::get_golem_options("sqlite_base"),
@@ -28,23 +28,22 @@ app_server <- function(input, output, session) {
   callModule(mod_config_limesurvey_server, "config_limesurvey_ui_2", rv)
   callModule(mod_config_api_server, "config_api_ui", rv)
   
-  rv <- callModule(mod_surveys_server, "surveys_ui", rv)
+  callModule(mod_surveys_server, "surveys_ui", rv)
   
-  rv <- callModule(mod_filters_server, "filters_ui", rv)
-  
-  rv <- callModule(mod_import_contacts_server, "import_contacts_ui", rv)
+  callModule(mod_filters_server, "filters_ui", rv)
+  callModule(mod_import_contacts_server, "import_contacts_ui", rv)
   
   dt_participants_attributes <- impexp::sqlite_import(
     golem::get_golem_options("sqlite_base"),
     "participants_attributes"
-  ) %>% 
+  ) %>%
     dplyr::filter(description != patchr::str_normalise_colnames(description))
   labels <- dt_participants_attributes$description
-  names(labels) <- dt_participants_attributes$description %>% 
+  names(labels) <- dt_participants_attributes$description %>%
     patchr::str_normalise_colnames()
-  
+
   callModule(
-    shiny.modules::selected_filters_server, "selected_filters_ui", 
+    shiny.modules::selected_filters_server, "selected_filters_ui",
     group_inputs = rv$filter_inputs,
     labels = c(
       survey_title = "Survey title",
@@ -52,16 +51,16 @@ app_server <- function(input, output, session) {
     )
   )
   
-  rv <- callModule(mod_participants_server, "participants_ui", rv)
-  
+  callModule(mod_participants_server, "participants_ui", rv)
+
   callModule(mod_crowdsourcing_server, "crowdsourcing_ui", rv)
-  
+
   callModule(mod_email_validation_server, "email_validation_ui", rv)
-  
+
   callModule(mod_mailing_server, "mailing_ui", rv)
-  
+
   callModule(mod_linkedin_server, "linkedin_ui", rv)
-  
+
   callModule(mod_sms_sending_server, "sms_sending_ui", rv)
   
 }

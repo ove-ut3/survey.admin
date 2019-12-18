@@ -98,6 +98,5 @@ mod_import_contacts_server <- function(input, output, session, rv){
         write.csv(con, row.names = FALSE, na = "", quote = FALSE)
     }
   )
-  
-  return(rv)
+
 }

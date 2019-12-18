@@ -245,6 +245,5 @@ mod_init_sqlite_server <- function(input, output, session, rv){
   rv$dt_crowdsourcing_mail_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_mail_template")
   rv$dt_mail_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "mail_template")
   rv$dt_sms_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "sms_template")
-  
-  return(rv)
+
 }

@@ -235,6 +235,4 @@ mod_participants_server <- function(input, output, session, rv){
     
   })
 
-  return(rv)
-  
 }
