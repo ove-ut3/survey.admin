@@ -15,6 +15,7 @@ Imports:
     mRpostman,
     rclipboard,
     RCurl,
+    RSQLite,
     rhandsontable,
     shinyalert,
     shinydashboard,
