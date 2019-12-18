@@ -209,7 +209,6 @@ mod_surveys_server <- function(input, output, session, rv){
       rownames = FALSE
     )
     
-    
   })
   
   observeEvent(input$remove, {
@@ -280,7 +279,7 @@ mod_surveys_server <- function(input, output, session, rv){
       DT::datatable(
         options = list(
           dom = "rtp"
-        ), 
+        ),
         rownames = FALSE
       )
     
