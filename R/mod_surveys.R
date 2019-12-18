@@ -169,6 +169,8 @@ mod_surveys_server <- function(input, output, session, rv){
         dplyr::mutate(num_attribute = as.integer(stringr::str_match(attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
         dplyr::arrange(num_attribute)
       
+      cron_responses(operation = "add")
+      
     }
     
   })
@@ -224,6 +226,10 @@ mod_surveys_server <- function(input, output, session, rv){
         golem::get_golem_options("sqlite_base"), 
         "surveys"
       )
+      
+      if (nrow(rv$dt_surveys) == 0) {
+        cron_responses(operation = "remove")
+      }
       
       rv$dt_participants_attributes <- rv$dt_participants_attributes %>% 
         tidyr::separate_rows(survey_id, sep = ";") %>% 

@@ -22,7 +22,8 @@ Imports:
     shinydashboardPlus,
     tippy
 RoxygenNote: 7.0.2
-Suggests: 
+Suggests:
+    cronR,
     survey.api,
     testthat
 Remotes:
