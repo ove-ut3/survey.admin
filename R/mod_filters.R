@@ -36,6 +36,8 @@ mod_filters_server <- function(input, output, session, rv){
   
   output$filters <- renderUI({
 
+    req(nrow(rv$dt_participants) >= 1)
+    
     list_init <- list(
       survey_title = list(inputId = "survey_title", title = "Survey title :"),
       optout = list(inputId = "optout", title = "OptOut :"),
@@ -137,6 +139,8 @@ mod_filters_server <- function(input, output, session, rv){
 
   output$picker_attributes <- renderUI({
 
+    req(nrow(rv$dt_participants_attributes) >= 1)
+
     # id Important to be finished by '-selectized' !
     shinyWidgets::pickerInput(
       ns("attributes-selectized"),
@@ -155,7 +159,9 @@ mod_filters_server <- function(input, output, session, rv){
   })
   
   output$picker_contacts <- renderUI({
-    
+
+    req(nrow(rv$dt_participants_contacts) >= 1)
+
     # id Important to be finished by '-selectized' !
     shinyWidgets::pickerInput(
       ns("contacts-selectized"),
