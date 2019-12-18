@@ -186,17 +186,16 @@ mod_surveys_server <- function(input, output, session, rv){
           rv$dt_participants %>% 
             dplyr::count(survey_id) %>% 
             dplyr::rename(participants = n),
-          by = "survey_id"
-        ) %>% 
-        dplyr::left_join(
-          impexp::r_import(golem::get_golem_options("cron_file")) %>% 
-            dplyr::group_by(survey_id) %>% 
-            dplyr::summarise_at(c("optout", "completed"), sum) %>% 
-            dplyr::ungroup(),
-          by = "survey_id"
-        ) %>% 
-        dplyr::mutate(pct_completed = scales::percent(completed / (participants - optout), accuracy = 0.1, suffix = "\u202F%"))
-      
+          by = "survey_id") %>% 
+          dplyr::left_join(
+            impexp::r_import(golem::get_golem_options("cron_responses")) %>% 
+              dplyr::group_by(survey_id) %>% 
+              dplyr::summarise_at(c("optout", "completed"), sum) %>% 
+              dplyr::ungroup(),
+            by = "survey_id"
+          ) %>% 
+          dplyr::mutate(pct_completed = scales::percent(completed / (participants - optout), accuracy = 0.1, suffix = "\u202F%"))
+
     }
     
     data %>% 

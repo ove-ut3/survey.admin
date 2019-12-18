@@ -117,7 +117,7 @@ mod_filters_server <- function(input, output, session, rv){
       data = rv$dt_participants %>% 
         dplyr::left_join(rv$dt_surveys, by = "survey_id") %>% 
         dplyr::left_join(
-          golem::get_golem_options("cron_file") %>% 
+          golem::get_golem_options("cron_responses") %>% 
             impexp::r_import(),
           by = c("survey_id", "token")
         ) %>% 
