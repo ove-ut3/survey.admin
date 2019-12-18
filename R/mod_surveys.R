@@ -109,7 +109,7 @@ mod_surveys_server <- function(input, output, session, rv){
       dplyr::anti_join(rv$dt_surveys, by = "survey_id") %>% 
       dplyr::filter(survey_title %in% input[["selected_survey_picker"]])
 
-    if (nrow(add_surveys)) {
+    if (nrow(add_surveys) >= 1) {
       
       rv$dt_surveys <- dplyr::bind_rows(rv$dt_surveys, add_surveys)
       
