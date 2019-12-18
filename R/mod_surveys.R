@@ -131,8 +131,10 @@ mod_surveys_server <- function(input, output, session, rv){
       add_participants <- limer::get_participants(add_surveys$survey_id, all_attributes = TRUE) %>% 
         dplyr::select(-email) %>% 
         dplyr::mutate(
-          surveyurl = glue::glue("{domain_limesurvey}{survey_id}?token={token}"),
-          optouturl = glue::glue("{domain_limesurvey}optout/tokens/{survey_id}?token={token}")
+          surveyurl = glue::glue("{domain_limesurvey}{survey_id}?token={token}") %>% 
+            as.character(),
+          optouturl = glue::glue("{domain_limesurvey}optout/tokens/{survey_id}?token={token}") %>% 
+            as.character()
         )
       
       rv$dt_participants <- dplyr::bind_rows(rv$dt_participants, add_participants)
