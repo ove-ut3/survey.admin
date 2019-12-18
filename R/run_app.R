@@ -10,7 +10,7 @@ run_app <- function(sqlite_base, cron_responses, credentials) {
       server = app_server,
       onStart = function() {
         onStop(function() {
-          cat("Releasing limer session key\n")
+          cat(file = stderr(), "Releasing limer session key", "\n")
           release <- limer::release_session_key()
         })
       }
