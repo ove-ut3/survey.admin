@@ -143,9 +143,11 @@ mod_filters_server <- function(input, output, session, rv){
       label = "Set attributes as filters",
       choices = rv$dt_participants_attributes$description,
       multiple = TRUE,
-      options = list("showTick" = TRUE,
-                     "actions-box" = TRUE,
-                     "dropdown-align-right" = TRUE),
+      options = list(
+        "showTick" = TRUE,
+        "actions-box" = TRUE,
+        "dropdown-align-right" = TRUE
+      ),
       choicesOpt = list(
         subtext = paste("- ", rv$dt_participants_attributes$attribute)
       )
@@ -160,9 +162,11 @@ mod_filters_server <- function(input, output, session, rv){
       label = "Set contacts as filters",
       choices = c("one_cellphone", "one_valid_email"),
       multiple = TRUE,
-      options = list("showTick" = TRUE,
-                     "actions-box" = TRUE,
-                     "dropdown-align-right" = TRUE)
+      options = list(
+        "showTick" = TRUE,
+        "actions-box" = TRUE,
+        "dropdown-align-right" = TRUE
+      )
     )
   })
   
