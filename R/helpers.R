@@ -155,7 +155,9 @@ mailing <- function(rv, participants, from, subject, body, sleep, delete_survey 
       attribute_body = .
     )
   
-  df_participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes")
+  df_participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
+    tidyr::separate_rows(survey_id, sep = ";") %>% 
+    dplyr::filter(survey_id %in% participants$survey_id)
   
   extra_attributes <- dplyr::tibble(
     attribute = c("TOKEN", "FIRSTNAME", "LASTNAME", paste0("ATTRIBUTE_", c(nrow(df_participants_attributes), nrow(df_participants_attributes) + 1))),
@@ -203,18 +205,20 @@ mailing <- function(rv, participants, from, subject, body, sleep, delete_survey 
   to <- patchr::rename(participants, rename) %>% 
     patchr::normalise_colnames()
   
-  body_html <- body %>% 
-    stringr::str_replace_all("\n", "<br>")
   style <- "'font-family: calibri; font-size: 11pt;'"
-  body_html <- glue::glue("<p style={style}>{body_html}</p>")
+  body <- glue::glue("<p style={style}>{body}</p>")
   
-  recode_body <- rename %>% 
-    dplyr::filter(attribute_body != rename)
+  recode_body <- dplyr::filter(rename, attribute_body != rename)
   
   if (nrow(recode_body) >= 1) {
     for (num_attribute in 1:nrow(recode_body)) {
-      body_html <- stringr::str_replace_all(
-        body_html,
+      body <- stringr::str_replace_all(
+        body,
+        paste0("\\{", recode_body$attribute_body[num_attribute], "\\}"),
+        paste0("{", recode_body$rename[num_attribute], "}")
+      )
+      subject <- stringr::str_replace_all(
+        subject,
         paste0("\\{", recode_body$attribute_body[num_attribute], "\\}"),
         paste0("{", recode_body$rename[num_attribute], "}")
       )
@@ -222,13 +226,15 @@ mailing <- function(rv, participants, from, subject, body, sleep, delete_survey 
     
   }
   
+  body <- stringr::str_replace_all(body, "\n", "<br>")
+  
   key <- limer::get_session_key()
 
   survey_id_tid <- limer::mailing_create_survey(
     from = from,
     to = to,
     subject = subject,
-    body = body_html
+    body = body
   )
   survey_id <- survey_id_tid$survey_id
   tid <- survey_id_tid$tid
@@ -261,25 +267,25 @@ mailing <- function(rv, participants, from, subject, body, sleep, delete_survey 
           mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
 
         }
-        
+
         event <- dplyr::tibble(
           token = participants$token[i],
           type = "general mailing",
           comment = to$email[i],
           date = as.character(lubridate::today())
         )
-        
+
         impexp::sqlite_append_rows(
           golem::get_golem_options("sqlite_base"),
           event,
           "participants_events"
         )
-        
+
         rv$df_participants_events <- dplyr::bind_rows(
           rv$df_participants_events,
           event
         )
-        
+
         incProgress(
           1 / length(tid),
           detail = paste0(
@@ -291,15 +297,15 @@ mailing <- function(rv, participants, from, subject, body, sleep, delete_survey 
       }
 
     })
-    
+
   }
-  
+
   if (delete_survey == TRUE) {
-    
+
     suppression <- limer::call_limer("delete_survey", params = list("iSurveyID" = survey_id))
-    
+
   }
-  
+
   release <- limer::release_session_key()
   
 }
