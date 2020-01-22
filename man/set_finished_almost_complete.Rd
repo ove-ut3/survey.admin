@@ -6,13 +6,19 @@
 \usage{
 set_finished_almost_complete(
   sqlite_base,
-  almost_complete_group = c(`123459` = 16, `123458` = 16, `123456` = 16)
+  cron_responses,
+  almost_complete_group = c(`123459` = 16, `123458` = 16, `123456` = 16),
+  token = NULL
 )
 }
 \arguments{
 \item{sqlite_base}{\dots}
 
+\item{cron_responses}{\dots}
+
 \item{almost_complete_group}{\dots}
+
+\item{token}{\dots}
 }
 \description{
 set_finished_almost_complete

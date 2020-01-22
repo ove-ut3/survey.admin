@@ -36,16 +36,22 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     tagList(
       fluidRow(
         box(
-          title = "Crowdsourcing data", width = 12,
+          title = "Crowdsourcing columns", width = 12,
           rhandsontable::rHandsontableOutput(ns("hot_crowdsourcing_columns"))
         )
       ),
       fluidRow(
         box(
           title = "Contributors list", width = 5,
-          fileInput(ns("import_contributors"), "Import and replace contributors"),
+          fileInput(
+            ns("import_contributors"),
+            "Import and replace contributors"
+          ),
           DT::DTOutput(ns("dt_crowdsourcing_contributors"), height = 528),
-          actionButton(ns("generate_passwords"), "Generate passwords")
+          actionButton(
+            ns("generate_passwords"),
+            "Generate passwords"
+          )
         ),
         box(
           title = "Mail template", width = 7,
@@ -61,10 +67,6 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
           uiOutput(ns("input_textarea_mail_body")),
           div(
             style = "display: inline-block; vertical-align: top;",
-            actionButton(ns("save_mail"), "Save mail configuration", icon = icon("save"))
-          ),
-          div(
-            style = "display: inline-block; vertical-align: top;",
             fileInput(ns("import_mail"), label = NULL, buttonLabel = "Import mail configuration")
           ),
           div(
@@ -76,7 +78,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       fluidRow(
         box(
           title = "Contributions moderation",
-          width = 12
+          width = 12,
+          DT::DTOutput(ns("dt_crowdsourcing_moderation"))
         )
       )
     )
@@ -87,107 +90,128 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
 
     if (nrow(impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_columns")) == 0) {
 
-      rv$dt_crowdsourcing_columns <- dplyr::tibble(
-        description = names(rv$dt_participants)
+      contacts_key <- rv$df_participants_contacts %>% 
+        dplyr::pull(key) %>% 
+        unique()
+      
+      rv$df_crowdsourcing_columns <- dplyr::tibble(
+        description = names(rv$df_participants)
       ) %>%
-        dplyr::left_join(rv$dt_participants_attributes, by = "description") %>%
+        dplyr::filter(description != "tid") %>% 
+        dplyr::left_join(rv$df_participants_attributes, by = "description") %>%
         tidyr::replace_na(list(num_attribute = 0L)) %>%
         dplyr::mutate(attribute = dplyr::if_else(is.na(attribute), description, attribute)) %>%
         dplyr::arrange(num_attribute) %>%
         dplyr::select(column = attribute, description) %>%
         dplyr::add_row(
-          .before = 1,
-          column = c("email", "phone", "survey_link"),
-          description = c("Email", "Phone", "Survey link")
+          .after = 4,
+          column = c("completed", "optout", "lastpage_rate"),
+          description = c("completed", "optout", "lastpage_rate")
+        ) %>%
+        dplyr::add_row(
+          .after = 9,
+          column = c(
+            contacts_key,
+            glue::glue("{contacts_key}_invalid")
+          ),
+          description = c(
+            contacts_key,
+            glue::glue("{contacts_key}_invalid")
+          )
         ) %>%
         dplyr::mutate(
           description_new = description,
           display = FALSE,
+          order = NA_integer_,
           edit = FALSE,
           filter = FALSE,
           restriction = FALSE
         )
 
+      impexp::sqlite_export(
+        golem::get_golem_options("sqlite_base"),
+        data = rv$df_crowdsourcing_columns,
+        table_name = "crowdsourcing_columns",
+        overwrite = TRUE
+      )
+      
     }
 
-    rv$dt_crowdsourcing_columns %>%
-      rhandsontable::rhandsontable(rowHeaders = TRUE, height = 600, manualRowMove = TRUE) %>%
-      rhandsontable::hot_table(contextMenu = FALSE, disableVisualSelection = TRUE, highlightCol = TRUE, highlightRow = TRUE, stretchH = "all") %>%
+    rv$df_crowdsourcing_columns %>%
+      rhandsontable::rhandsontable(rowHeaders = TRUE, height = 600) %>%
+      rhandsontable::hot_table(contextMenu = FALSE, highlightCol = TRUE, highlightRow = TRUE, stretchH = "all") %>%
       rhandsontable::hot_rows(rowHeights = 35) %>%
       rhandsontable::hot_col(c("column", "description"), readOnly = TRUE) %>%
+      rhandsontable::hot_col("order", type = "numeric") %>%
       rhandsontable::hot_col(c("restriction", "display", "edit", "filter"), halign = "htCenter")
 
   })
   
   observeEvent(input$hot_crowdsourcing_columns, {
     
-    if (!is.null(input$hot_crowdsourcing_columns)) {
-      
-      update <- input$hot_crowdsourcing_columns %>% 
-        rhandsontable::hot_to_r() %>% 
-        dplyr::as_tibble()
-      
-      if (!is.null(input$hot_crowdsourcing_columns$changes$changes) | !is.null(input$hot_crowdsourcing_columns$changes$ind)) {
-        
-        impexp::sqlite_export(
-          golem::get_golem_options("sqlite_base"),
-          update,
-          "crowdsourcing_columns",
-          overwrite = TRUE
-        )
-        
-        if (input$hot_crowdsourcing_columns$changes$event != "afterRowMove") {
-          rv$dt_crowdsourcing_columns <- update
-        }
-        
-      }
-      
-    }
+    req(input$hot_crowdsourcing_columns)
     
+    update <- input$hot_crowdsourcing_columns %>% 
+      rhandsontable::hot_to_r() %>% 
+      dplyr::as_tibble()
+    
+    if (!is.null(input$hot_crowdsourcing_columns$changes$changes) | !is.null(input$hot_crowdsourcing_columns$changes$ind)) {
+      
+      impexp::sqlite_export(
+        golem::get_golem_options("sqlite_base"),
+        update,
+        "crowdsourcing_columns",
+        overwrite = TRUE
+      )
+      
+      rv$df_crowdsourcing_columns <- update
+
+    }
+
   })
   
   observeEvent(input$import_contributors, {
     
-    if (!is.null(input$import_contributors)) {
-      
-      contributors <- read.csv(input$import_contributors$datapath, na.strings = "")
-
-      impexp::sqlite_append_rows(
-        golem::get_golem_options("sqlite_base"),
-        contributors,
-        "crowdsourcing_contributors"
-      )
-
-      rv$dt_crowdsourcing_contributors <- contributors
-       
-    }
+    req(input$import_contributors)
     
+    contributors <- read.csv(input$import_contributors$datapath, na.strings = "")
+
+    impexp::sqlite_export(
+      golem::get_golem_options("sqlite_base"),
+      data = contributors,
+      table_name = "crowdsourcing_contributors",
+      overwrite = TRUE
+    )
+
+    rv$df_crowdsourcing_contributors <- contributors
+
   })
   
   output$dt_crowdsourcing_contributors <- DT::renderDT({
     
-    contributor_restriction <- rv$dt_crowdsourcing_columns %>%
+    contributor_restriction <- rv$df_crowdsourcing_columns %>%
       dplyr::filter(restriction) %>% 
       dplyr::pull(description) %>% 
       stringr::str_replace_all(" ", ".")
     
-    if (any(!contributor_restriction %in% names(rv$dt_crowdsourcing_contributors))) {
+    if (any(!contributor_restriction %in% names(rv$df_crowdsourcing_contributors))) {
       
-      list_mutate <- stats::setNames(list("NA_character"), contributor_restriction)
+      list_mutate <- stats::setNames(list("NA_character_"), contributor_restriction)
       
-      rv$dt_crowdsourcing_contributors <- rv$dt_crowdsourcing_contributors %>% 
+      rv$df_crowdsourcing_contributors <- rv$df_crowdsourcing_contributors %>% 
         dplyr::mutate(!!!list_mutate)
       
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"),
-        rv$dt_crowdsourcing_contributors,
+        rv$df_crowdsourcing_contributors,
         "crowdsourcing_contributors",
         overwrite = TRUE
       )
       
     }
     
-    rv$dt_crowdsourcing_contributors %>% 
+    rv$df_crowdsourcing_contributors %>% 
+      dplyr::select(user, password, contributor_restriction) %>% 
       DT::datatable(
         rownames = FALSE,
         options = list(
@@ -199,191 +223,185 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
   
   output$input_text_sender_email <- renderUI({
     
-    value <- rv$dt_crowdsourcing_mail_template %>% 
+    rv$crowdsourcing_sender_email <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "crowdsourcing_mail_template"
+    ) %>% 
       dplyr::filter(key == "sender_email") %>% 
       dplyr::pull(value)
     
-    textInput(ns("sender_email"), "Sendind email", value = value, placeholder = "sender@domain.tld")
+    textInput(
+      ns("sender_email"),
+      label = "Sendind email",
+      value = isolate(rv$crowdsourcing_sender_email),
+      placeholder = "sender@domain.tld"
+    )
+    
+  })
+  
+  observeEvent(input$sender_email, {
+    
+    req(input$sender_email != rv$crowdsourcing_sender_email)
+    
+    rv$crowdsourcing_sender_email <- input$sender_email
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$sender_email}\" WHERE key = \"sender_email\";")
+    )
     
   })
   
   output$input_text_sender_alias <- renderUI({
     
-    value <- rv$dt_crowdsourcing_mail_template %>% 
+    rv$crowdsourcing_sender_alias <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "crowdsourcing_mail_template"
+    ) %>% 
       dplyr::filter(key == "sender_alias") %>% 
       dplyr::pull(value)
     
-    textInput(ns("sender_alias"), "Sending alias", value = value, placeholder = "Sender name")
+    textInput(
+      ns("sender_alias"),
+      label = "Sending alias",
+      value = isolate(rv$crowdsourcing_sender_alias),
+      placeholder = "Sender name"
+    )
+    
+  })
+  
+  observeEvent(input$sender_alias, {
+    
+    req(input$sender_alias != rv$crowdsourcing_sender_alias)
+    
+    rv$crowdsourcing_sender_alias <- input$sender_alias
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$sender_alias}\" WHERE key = \"sender_alias\";")
+    )
     
   })
   
   output$input_text_mail_subject <- renderUI({
     
-    value <- rv$dt_crowdsourcing_mail_template %>% 
+    rv$crowdsourcing_mail_subject <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "crowdsourcing_mail_template"
+    ) %>% 
       dplyr::filter(key == "subject") %>% 
       dplyr::pull(value) %>% 
       stringr::str_replace_all("''", "'")
     
-    textInput(ns("mail_subject"), "Subject", value = value, placeholder = "My mail subject")
+    textInput(
+      ns("mail_subject"),
+      label = "Subject",
+      value = isolate(rv$crowdsourcing_mail_subject),
+      placeholder = "My mail subject"
+    )
+    
+  })
+  
+  observeEvent(input$mail_subject, {
+    
+    req(input$mail_subject != rv$crowdsourcing_mail_subject)
+    
+    rv$crowdsourcing_mail_subject <- input$mail_subject
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$mail_subject}\" WHERE key = \"subject\";")
+    )
     
   })
   
   output$input_textarea_mail_body <- renderUI({
     
-    value <- rv$dt_crowdsourcing_mail_template %>% 
+    rv$crowdsourcing_mail_body <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "crowdsourcing_mail_template"
+    ) %>% 
       dplyr::filter(key == "body") %>% 
       dplyr::pull(value) %>% 
       stringr::str_replace_all("''", "'")
     
-    textAreaInput(ns("mail_body"), "Body", height = "400px", value = value, placeholder = "My mail body")
+    textAreaInput(
+      ns("mail_body"),
+      label = "Body",
+      height = "400px",
+      value = isolate(rv$crowdsourcing_mail_body),
+      placeholder = "My mail body"
+    )
     
   })
   
-  observeEvent(input$send_email, {
+  observeEvent(input$mail_body, {
     
-    if (nchar(input$sender_email) == 0) {
-      shinyalert::shinyalert(type = "error", text = "Email sender must be filled.")
-      return()
-    }
+    req(input$mail_body != rv$crowdsourcing_mail_body)
     
-    selected_emails <- rv$dt_participants_filter() %>% 
-      dplyr::left_join(rv$dt_participants_contacts %>% 
-                         dplyr::filter(key == "email"),
-                       by = "token") %>% 
-      dplyr::rename(email = value)
-    
-    if (!is.null(input[["dt_emails_rows_selected"]])) {
-      selected_emails <- selected_emails %>% 
-        dplyr::filter(dplyr::row_number() %in% input[["dt_emails_rows_selected"]])
-    }
-    
-    attributes_mail <- paste(input$mail_subject, input$mail_body) %>% 
-      stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
-      .[[1]] %>% 
-      .[, 2] %>% 
-      unique() %>% 
-      tolower()
-    
-    rename <- rv$dt_participants_attributes %>% 
-      dplyr::mutate_at("description", patchr::str_normalise_colnames) %>% 
-      dplyr::bind_rows(
-        dplyr::tibble(
-          attribute = c("token", "firstname", "lastname"),
-          description = c("token", "firstname", "lastname")
-        )
-      ) %>% 
-      dplyr::filter(attribute %in% !!attributes_mail) %>% 
-      dplyr::select(column = description, rename = attribute)
-    
-    to <- patchr::rename(selected_emails, rename)
-    
-    body_html <- input$mail_body %>% 
-      stringr::str_replace_all("\n", "<br>")
-    
-    style <- "'font-family: calibri; font-size: 11pt;'"
-    body_html <- glue::glue("<p style={style}>{body_html}</p>")
-    
-    if ("token" %in% names(to)) {
-      
-      attribute_token <- rv$dt_participants_attributes %>% 
-        tail(1) %>% 
-        dplyr::pull(num_attribute) %>% 
-        sum(1) %>% 
-        { paste0("attribute_", .) }
-      
-      names(to)[which(names(to) == "token")] <- attribute_token
-      
-      body_html <- stringr::str_replace_all(body_html, "\\{TOKEN\\}", paste0("{", toupper(attribute_token), "}"))
-      
-    }
-    
-    survey_id_tid <- limer::mailing_create_survey(
-      from = list(
-        "email" = input$sender_email,
-        "alias" = input$sender_alias
-      ),
-      to = to,
-      subject = input$mail_subject,
-      body = body_html
-    )
-    survey_id <- survey_id_tid$survey_id
-    tid <- survey_id_tid$tid
-    
-    withProgress(message = "Sending email :", value = 0, detail = "0%", {
-      
-      for (i in 1:length(tid)) {
-        
-        if (i != 1) Sys.sleep(input$mailing_sleep)
-        
-        mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
-        
-        if (length(mailing[[1]]$status) == 0) {
-          
-          key <- limer::get_session_key()
-          mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
-          
-        }
-        
-        incProgress(
-          1 / length(tid), 
-          detail = paste0(
-            round(i / length(tid) * 100, 1), "% - ", 
-            to$email[i]
-          )
-        )
-        
-      }
-      
-    })
-    
-    suppression <- limer::call_limer("delete_survey", params = list("iSurveyID" = survey_id))
-    
-  })
-  
-  observeEvent(input$save_mail, {
+    rv$crowdsourcing_mail_body <- input$mail_body
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE crowdsourcing_mail_template SET value = "', input$sender_email,'" WHERE key = "sender_email";')
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$mail_body}\" WHERE key = \"body\";")
     )
-    
-    impexp::sqlite_execute_sql(
-      golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE crowdsourcing_mail_template SET value = "', input$sender_alias,'" WHERE key = "sender_alias";')
-    )
-    
-    impexp::sqlite_execute_sql(
-      golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE crowdsourcing_mail_template SET value = "', input$mail_subject,'" WHERE key = "subject";')
-    )
-    
-    body <- input$mail_body %>% 
-      stringr::str_replace_all('"', '""')
-    
-    impexp::sqlite_execute_sql(
-      golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE crowdsourcing_mail_template SET value = "', body,'" WHERE key = "body";')
-    )
-    
-    rv$dt_crowdsourcing_mail_template$value[which(rv$dt_crowdsourcing_mail_template$key == "sender_email")] <- input$sender_email
-    rv$dt_crowdsourcing_mail_template$value[which(rv$dt_crowdsourcing_mail_template$key == "sender_alias")] <- input$sender_alias
-    rv$dt_crowdsourcing_mail_template$value[which(rv$dt_crowdsourcing_mail_template$key == "subject")] <- input$mail_subject
-    rv$dt_crowdsourcing_mail_template$value[which(rv$dt_crowdsourcing_mail_template$key == "body")] <- input$mail_body
     
   })
   
   observeEvent(input$import_mail, {
     
-    if (!is.null(input$import_mail)) {
-      
-      mail_template <- jsonlite::fromJSON(input$import_mail$datapath)
-      
-      rv$dt_mail_template$value[which(rv$dt_mail_template$key == "sender_email")] <- mail_template$sender_email
-      rv$dt_mail_template$value[which(rv$dt_mail_template$key == "sender_alias")] <- mail_template$sender_alias
-      rv$dt_mail_template$value[which(rv$dt_mail_template$key == "subject")] <- mail_template$subject
-      rv$dt_mail_template$value[which(rv$dt_mail_template$key == "body")] <- mail_template$body
-      
-    }
+    req(input$import_mail)
+    
+    mail_template <- jsonlite::fromJSON(input$import_mail$datapath) %>% 
+      purrr::map(stringr::str_replace_all, '"', '""')
+    
+    # sender email
+    updateTextInput(
+      session,
+      "sender_email",
+      value = mail_template$sender_email
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$sender_email}\" WHERE key = \"sender_email\";")
+    )
+    
+    # sender alias
+    updateTextInput(
+      session,
+      "sender_alias",
+      value = mail_template$sender_alias
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$sender_alias}\" WHERE key = \"sender_alias\";")
+    )
+    
+    # mail subject
+    updateTextInput(
+      session,
+      "mail_subject",
+      value = mail_template$subject
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$subject}\" WHERE key = \"subject\";")
+    )
+    
+    # mail body
+    updateTextAreaInput(
+      session,
+      "mail_body",
+      value = mail_template$body
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$body}\" WHERE key = \"body\";")
+    )
     
   })
   
@@ -403,4 +421,14 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     }
   )
   
+  output$dt_crowdsourcing_moderation <- DT::renderDT({
+    
+    impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "crowdsourcing_log"
+    ) %>% 
+      dplyr::filter(is.na(status)) %>% 
+      DT::datatable()
+    
+  })
 }

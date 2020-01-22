@@ -31,7 +31,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
   
   output$ui_short_link <- renderUI({
     
-    cuttly_api_key <- rv$dt_config %>% 
+    cuttly_api_key <- rv$df_config %>% 
       dplyr::filter(key == "api_key_spothit") %>% 
       dplyr::pull(value)
     
@@ -47,7 +47,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
   
   output$ui_sms <- renderUI({
     
-    spothit_api_key <- rv$dt_config %>% 
+    spothit_api_key <- rv$df_config %>% 
       dplyr::filter(key == "api_key_spothit") %>% 
       dplyr::pull(value)
     
@@ -73,29 +73,42 @@ mod_sms_sending_server <- function(input, output, session, rv){
         box(
           title = "SMS template", width = 12,
           uiOutput(ns("input_text_sender")),
-          uiOutput(ns("input_textarea_sms_body")),
+          uiOutput(ns("input_textarea_body")),
           div(
-            style = "display: inline-block;",
-            actionButton(ns("save_sms"), "Save SMS configuration", icon = icon("save"))
+            style = "display: inline-block; vertical-align: top;",
+            fileInput(
+              ns("import_sms"),
+              label = NULL, 
+              buttonLabel = "Import SMS configuration"
+            )
           ),
           div(
-            style = "display: inline-block;",
-            actionButton(ns("import_sms"), "Import SMS configuration", icon = icon("file-import"))
-          ),
-          div(
-            style = "display: inline-block;",
-            actionButton(ns("export_sms"), "Export SMS configuration", icon = icon("file-export"))
+            style = "display: inline-block; vertical-align: top;",
+            downloadButton(
+              ns("export_sms"),
+              "Export SMS configuration",
+              icon = icon("file-export")
+            )
           )
         ),
         box(
           title = "Send SMS", width = 12,
           div(
             style = "display: inline-block; width: 50%;", # vertical-align: middle;
-            numericInput(ns("sms_sleep"), "Sleep time in seconds between each SMS", value = 7, min = 0)
+            numericInput(
+              ns("sms_sleep"),
+              "Sleep time in seconds between each SMS",
+              value = 7,
+              min = 0
+            )
           ),
           div(
             style = "display: inline-block;", # vertical-align: middle;
-            actionButton(ns("send_sms"), "Send SMS", icon = icon("mobile"))
+            actionButton(
+              ns("send_sms"),
+              "Send SMS", 
+              icon = icon("mobile")
+            )
           )
         )
       )
@@ -105,9 +118,9 @@ mod_sms_sending_server <- function(input, output, session, rv){
   
   dt_sms_list <- reactive({
     
-    rv$dt_participants_filter() %>% 
+    rv$df_participants_filter() %>% 
       dplyr::left_join(
-        rv$dt_participants_contacts,
+        rv$df_participants_contacts,
         by = "token"
       ) %>% 
       dplyr::filter(stringr::str_detect(value, "^0[67] ")) %>% 
@@ -178,11 +191,11 @@ mod_sms_sending_server <- function(input, output, session, rv){
         dplyr::filter(dplyr::row_number() %in% input[["dt_phones_rows_selected"]])
     }
     
-    if ("surveyurl_cuttly" %in% names(rv$dt_participants)) {
+    if ("surveyurl_cuttly" %in% names(rv$df_participants)) {
       
       selected_phones <- selected_phones %>% 
         dplyr::anti_join(
-          tidyr::drop_na(rv$dt_participants, "surveyurl_cuttly"),
+          tidyr::drop_na(rv$df_participants, "surveyurl_cuttly"),
           by = "token"
         )
       
@@ -190,7 +203,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
     
     if (nrow(selected_phones) >= 1) {
       
-      api_key <- rv$dt_config %>% 
+      api_key <- rv$df_config %>% 
         dplyr::filter(key == "api_key_cuttly") %>% 
         dplyr::pull(value)
       
@@ -205,19 +218,19 @@ mod_sms_sending_server <- function(input, output, session, rv){
         dplyr::filter(status == 7) %>% 
         dplyr::select(token, new_shortened_url)
       
-      rv$dt_participants <- rv$dt_participants %>% 
+      rv$df_participants <- rv$df_participants %>% 
         dplyr::left_join(shortened_urls, by = "token")
       
-      if ("surveyurl_cuttly" %in% names(rv$dt_participants)) {
+      if ("surveyurl_cuttly" %in% names(rv$df_participants)) {
         
-        rv$dt_participants <- rv$dt_participants %>% 
+        rv$df_participants <- rv$df_participants %>% 
           dplyr::mutate(
             new_shortened_url = dplyr::if_else(!is.na(new_shortened_url), new_shortened_url, surveyurl_cuttly)
           )
         
       }
       
-      rv$dt_participants <- rv$dt_participants %>%
+      rv$df_participants <- rv$df_participants %>%
         dplyr::rename(surveyurl_cuttly = new_shortened_url)
       
       impexp::sqlite_execute_sql(
@@ -227,7 +240,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
       
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"),
-        rv$dt_participants,
+        rv$df_participants,
         "participants"
       )
       
@@ -237,55 +250,99 @@ mod_sms_sending_server <- function(input, output, session, rv){
   
   output$input_text_sender <- renderUI({
     
-    value <- rv$dt_sms_template %>% 
+    rv$sms_sender <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "sms_template"
+    ) %>% 
       dplyr::filter(key == "sender") %>% 
       dplyr::pull(value)
     
-    textInput(ns("sender"), "Sending alias", value = value, placeholder = "Sender name", width = "50%")
+    textInput(
+      ns("sender"),
+      label = "Sending alias", 
+      value = isolate(rv$sms_sender), 
+      placeholder = "Sender name", 
+      width = "50%"
+    )
     
   })
   
-  output$input_textarea_sms_body <- renderUI({
+  observeEvent(input$sender, {
     
-    value <- rv$dt_sms_template %>% 
+    req(input$sender != rv$sms_sender)
+    
+    rv$sms_sender <- input$sender
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE sms_template SET value = \"{input$sender}\" WHERE key = \"sender\";")
+    )
+    
+  })
+  
+  output$input_textarea_body <- renderUI({
+    
+    rv$sms_body <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "sms_template"
+    ) %>% 
       dplyr::filter(key == "body") %>% 
       dplyr::pull(value) %>% 
       stringr::str_replace_all("''", "'")
     
-    textAreaInput(ns("sms_body"), "Body", height = "300px", value = value, placeholder = "My SMS body")
+    textAreaInput(
+      ns("body"),
+      label = "Body",
+      height = "300px",
+      value = isolate(rv$sms_body),
+      placeholder = "My SMS body"
+    )
     
   })
   
-  observeEvent(input$save_sms, {
+  observeEvent(input$body, {
+    
+    req(input$body != rv$sms_body)
+    
+    rv$sms_body <- input$body
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE sms_template SET value = "', input$sender,'" WHERE key = "sender";')
+      glue::glue("UPDATE sms_template SET value = \"{input$body}\" WHERE key = \"body\";")
     )
-    
-    body <- input$sms_body %>% 
-      stringr::str_replace_all('"', '""')
-    
-    impexp::sqlite_execute_sql(
-      golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE sms_template SET value = "', body,'" WHERE key = "body";')
-    )
-    
-    rv$dt_sms_template$value[which(rv$dt_sms_template$key == "sender")] <- input$sender
-    rv$dt_sms_template$value[which(rv$dt_sms_template$key == "body")] <- input$sms_body
     
   })
   
   observeEvent(input$import_sms, {
     
-    if (!is.null(input$import_sms)) {
-      
-      sms_template <- jsonlite::fromJSON(input$import_sms$datapath)
-      
-      rv$dt_sms_template$value[which(rv$dt_sms_template$key == "sender")] <- sms_template$sender
-      rv$dt_sms_template$value[which(rv$dt_sms_template$key == "body")] <- sms_template$body
-      
-    }
+    req(input$import_sms)
+    
+    sms_template <- jsonlite::fromJSON(input$import_sms$datapath) %>% 
+      purrr::map(stringr::str_replace_all, '"', '""')
+    
+    # sender
+    updateTextInput(
+      session,
+      "sender",
+      value = sms_template$sender
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE sms_template SET value = \"{sms_template$sender}\" WHERE key = \"sender\";")
+    )
+    
+    # body
+    updateTextInput(
+      session,
+      "body",
+      value = sms_template$body
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE sms_template SET value = \"{sms_template$body}\" WHERE key = \"body\";")
+    )
     
   })
   
@@ -296,7 +353,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
     content = function(con) {
       list(
         "sender" = input$sender,
-        "body" = input$sms_body
+        "body" = input$body
       ) %>% 
         jsonlite::toJSON(auto_unbox = TRUE, pretty = TRUE) %>% 
         writeLines(con, useBytes = TRUE)
@@ -330,7 +387,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
       )
     
     extra_attributes <- dplyr::tibble(
-      attribute = c("FIRSTNAME", "LASTNAME", paste0("ATTRIBUTE_", nrow(rv$dt_participants_attributes))),
+      attribute = c("FIRSTNAME", "LASTNAME", paste0("ATTRIBUTE_", nrow(rv$df_participants_attributes))),
       description = c("firstname", "lastname", "surveyurl"),
       attribute_body = c("FIRSTNAME", "LASTNAME", "SURVEYURL")
     )
@@ -338,22 +395,22 @@ mod_sms_sending_server <- function(input, output, session, rv){
     rename <- dplyr::bind_rows(
       attributes_body %>% 
         dplyr::semi_join(
-          rv$dt_participants_attributes,
+          rv$df_participants_attributes,
           by = c("attribute_body" = "attribute")
         ) %>% 
         dplyr::left_join(
-          rv$dt_participants_attributes,
+          rv$df_participants_attributes,
           by = c("attribute_body" = "attribute")
         ) %>% 
         dplyr::mutate(attribute = attribute_body) %>% 
         dplyr::select(attribute, description, attribute_body),
       attributes_body %>% 
         dplyr::semi_join(
-          rv$dt_participants_attributes,
+          rv$df_participants_attributes,
           by = c("attribute_body" = "description")
         ) %>% 
         dplyr::left_join(
-          rv$dt_participants_attributes,
+          rv$df_participants_attributes,
           by = c("attribute_body" = "description")
         ) %>% 
         dplyr::mutate(description = attribute_body) %>% 
@@ -377,7 +434,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
     recode_body <- rename %>% 
       tidyr::drop_na(rename)
     
-    api_key <- rv$dt_config %>% 
+    api_key <- rv$df_config %>% 
       dplyr::filter(key == "api_key_spothit") %>% 
       dplyr::pull(value)
     
@@ -424,8 +481,8 @@ mod_sms_sending_server <- function(input, output, session, rv){
           "participants_events"
         )
 
-        rv$dt_participants_events <- dplyr::bind_rows(
-          rv$dt_participants_events,
+        rv$df_participants_events <- dplyr::bind_rows(
+          rv$df_participants_events,
           event
         )
         

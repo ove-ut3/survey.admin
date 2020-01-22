@@ -33,13 +33,13 @@ app_server <- function(input, output, session) {
   callModule(mod_filters_server, "filters_ui", rv)
   callModule(mod_import_contacts_server, "import_contacts_ui", rv)
   
-  dt_participants_attributes <- impexp::sqlite_import(
+  df_participants_attributes <- impexp::sqlite_import(
     golem::get_golem_options("sqlite_base"),
     "participants_attributes"
   ) %>%
     dplyr::filter(description != patchr::str_normalise_colnames(description))
-  labels <- dt_participants_attributes$description
-  names(labels) <- dt_participants_attributes$description %>%
+  labels <- df_participants_attributes$description
+  names(labels) <- df_participants_attributes$description %>%
     patchr::str_normalise_colnames()
 
   callModule(
@@ -62,5 +62,9 @@ app_server <- function(input, output, session) {
   callModule(mod_linkedin_server, "linkedin_ui", rv)
 
   callModule(mod_sms_sending_server, "sms_sending_ui", rv)
+  
+  callModule(mod_phoning_server, "phoning_ui", rv)
+  
+  callModule(mod_incomplete_responses_server, "incomplete_responses_ui", rv)
   
 }

@@ -9,8 +9,10 @@ app_ui <- function() {
       title = "Limesurvey manager",
       dashboardHeaderPlus(
         left_menu = tagList(
-          div("Limesurvey manager",
-              style = "font-size: 22px; color: white;")
+          div(
+            "Limesurvey manager",
+            style = "font-size: 22px; color: white;"
+          )
         ),
         enable_rightsidebar = TRUE,
         rightSidebarIcon = "gears"
@@ -25,6 +27,7 @@ app_ui <- function() {
           menuItem("Linkedin", tabName = "tab_linkedin", icon = icon("linkedin", class = "fa fa-linkedin")),
           menuItem("SMS sending", tabName = "tab_sms_sending", icon = icon("mobile")),
           menuItem("Phoning team", tabName = "tab_phoning", icon = icon("headset")),
+          menuItem("Incomplete responses", tabName = "tab_incomplete_responses"),
           menuItem("Responses stats", tabName = "tab_reponses_stats", icon = icon("chart-bar")),
           hr(),
           menuItem("Selected filters", icon = icon("filter")),
@@ -85,6 +88,14 @@ app_ui <- function() {
           tabItem(
             tabName = "tab_sms_sending",
             mod_sms_sending_ui("sms_sending_ui")
+          ),
+          tabItem(
+            tabName = "tab_phoning",
+            mod_phoning_ui("phoning_ui")
+          ),
+          tabItem(
+            tabName = "tab_incomplete_responses",
+            mod_incomplete_responses_ui("incomplete_responses_ui")
           )
         )
       )

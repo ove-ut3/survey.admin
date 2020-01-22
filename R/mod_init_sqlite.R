@@ -46,10 +46,14 @@ mod_init_sqlite_server <- function(input, output, session, rv){
           "api_key_listflow",
           "api_key_quickemailverification",
           "api_key_emailmarker",
-          "api_key_spothit"
+          "api_key_spothit",
+          "participants_dt_attributes",
+          "phoning_attributes_groups",
+          "phoning_attributes_participants",
+          "phoning_help_text"
         )
       ) %>% 
-        dplyr::mutate(value = ""),
+        dplyr::mutate(value = character(nrow(.))),
       "config"
     )
   }
@@ -136,26 +140,12 @@ mod_init_sqlite_server <- function(input, output, session, rv){
     )
   }
   
-  if (! "email_validation" %in% impexp::sqlite_list_tables(sqlite_base)) {
-    
-    impexp::sqlite_export(
-      sqlite_base, 
-      dplyr::tibble(
-        email = character(0),
-        service = integer(0),
-        status = character(0),
-        date = character(0)
-      ),
-      "email_validation"
-    )
-  }
-  
   if (! "crowdsourcing_contributors" %in% impexp::sqlite_list_tables(sqlite_base)) {
     
     impexp::sqlite_export(
       sqlite_base, 
       dplyr::tibble(
-        email = character(0),
+        user = character(0),
         password = character(0)
       ),
       "crowdsourcing_contributors"
@@ -170,10 +160,11 @@ mod_init_sqlite_server <- function(input, output, session, rv){
         column = character(0),
         description = character(0),
         description_new = character(0),
-        restriction = integer(0),
-        display = integer(0),
-        edit = integer(0),
-        filter = integer(0)
+        display = logical(0),
+        order = integer(0),
+        edit = logical(0),
+        filter = logical(0),
+        restriction = logical(0)
       ),
       "crowdsourcing_columns"
     )
@@ -208,9 +199,9 @@ mod_init_sqlite_server <- function(input, output, session, rv){
     impexp::sqlite_export(
       sqlite_base, 
       dplyr::tibble(
-        key = c("search_text_input"),
-        value = character(1)
-      ),
+        key = c("dt_attributes", "search_text_input", "invitation_text", "survey_text")
+      ) %>% 
+        dplyr::mutate(value = character(nrow(.))),
       "linkedin"
     )
   }
@@ -227,23 +218,59 @@ mod_init_sqlite_server <- function(input, output, session, rv){
     )
   }
   
-  rv$dt_config <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "config")
-  rv$dt_surveys <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "surveys")
-  rv$dt_participants <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants", check.names = FALSE)
-  rv$dt_participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
+  if (! "phoning_team" %in% impexp::sqlite_list_tables(sqlite_base)) {
+    
+    impexp::sqlite_export(
+      sqlite_base, 
+      dplyr::tibble(
+        name = "Administrator",
+        user = "admin",
+        password = NA_character_,
+        survey_id = NA_character_
+      ),
+      "phoning_team"
+    )
+  }
+  
+  if (! "phoning_team_group" %in% impexp::sqlite_list_tables(sqlite_base)) {
+    
+    impexp::sqlite_export(
+      sqlite_base, 
+      dplyr::tibble(
+        user = character(0),
+        order = integer(0),
+        to_contact = integer(0)
+      ),
+      "phoning_team_group"
+    )
+  }
+  
+  rv$df_config <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "config")
+  rv$df_surveys <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "surveys")
+  rv$df_participants <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants", check.names = FALSE) %>% 
+    dplyr::rename_all(stringr::str_replace_all, "\\.", " ")
+  rv$df_participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
     dplyr::mutate(num_attribute = as.integer(stringr::str_match(attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
     dplyr::arrange(num_attribute)
   
-  rv$dt_participants_contacts <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_contacts")
-  rv$dt_participants_events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_events")
-  rv$dt_email_domains <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "email_domains")
-  rv$dt_email_validation <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "email_validation") %>% 
-    tidyr::replace_na(list(status = "missing"))
-  rv$dt_crowdsourcing_columns <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_columns") %>% 
-    dplyr::mutate_if(is.integer, as.logical)
-  rv$dt_crowdsourcing_contributors <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_contributors")
-  rv$dt_crowdsourcing_mail_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_mail_template")
-  rv$dt_mail_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "mail_template")
-  rv$dt_sms_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "sms_template")
+  rv$df_participants_contacts <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_contacts")
+  rv$df_participants_events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_events")
+  rv$df_email_domains <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "email_domains")
+  rv$df_crowdsourcing_columns <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_columns") %>% 
+    dplyr::mutate_at(c("display", "edit", "filter", "restriction"), as.logical)
+  rv$df_crowdsourcing_contributors <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_contributors")
+  rv$df_crowdsourcing_mail_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_mail_template")
+  rv$df_mail_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "mail_template")
+  
+  rv$df_linkedin <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "linkedin")
+  
+  rv$df_sms_template <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "sms_template")
+  
+  rv$df_phoning_team <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team") %>% 
+    dplyr::mutate_at("user", dplyr::na_if, "") %>% 
+    dplyr::mutate_at("survey_id", as.character)
+  rv$df_phoning_team_group <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_group") %>% 
+    dplyr::mutate_at("user", dplyr::na_if, "") %>% 
+    dplyr::rename_all(stringr::str_replace_all, "\\.", " ")
 
 }

@@ -36,12 +36,30 @@ mod_filters_server <- function(input, output, session, rv){
   
   output$filters <- renderUI({
 
-    req(nrow(rv$dt_participants) >= 1)
+    req(nrow(rv$df_participants) >= 1)
+    
+    data_filter <- rv$df_participants %>% 
+      patchr::normalise_colnames() %>% 
+      dplyr::left_join(rv$df_surveys, by = "survey_id") %>% 
+      dplyr::left_join(
+        golem::get_golem_options("cron_responses") %>% 
+          impexp::r_import(),
+        by = c("survey_id", "token")
+      )
     
     list_init <- list(
-      survey_title = list(inputId = "survey_title", title = "Survey title :"),
-      optout = list(inputId = "optout", title = "OptOut :"),
-      completed = list(inputId = "completed", title = "Completed :")
+      survey_title = list(
+        inputId = "survey_title",
+        title = "Survey title :"
+      ),
+      optout = list(
+        inputId = "optout",
+        title = "OptOut :"
+      ),
+      completed = list(
+        inputId = "completed",
+        title = "Completed :"
+      )
     )
     
     if (!is.null(input[["attributes-selectized"]])) {
@@ -81,6 +99,30 @@ mod_filters_server <- function(input, output, session, rv){
       vars_contacts <- input[["contacts-selectized"]] %>% 
         patchr::str_normalise_colnames()
       
+      one_cellphone <- rv$df_participants_contacts %>% 
+        dplyr::filter(stringr::str_detect(value, "^0[67] ")) %>% 
+        dplyr::select(token) %>% 
+        unique() %>% 
+        dplyr::mutate(one_cellphone = TRUE)
+      
+      one_valid_email <- rv$df_participants_contacts %>% 
+        dplyr::filter(
+          key == "email",
+          status %in% c("valid", "unknown")
+        ) %>% 
+        dplyr::select(token) %>% 
+        unique() %>% 
+        dplyr::mutate(one_valid_email = TRUE)
+      
+      picker_contacts <- rv$df_participants %>% 
+        dplyr::select(token) %>% 
+        dplyr::left_join(one_cellphone, by = "token") %>% 
+        dplyr::left_join(one_valid_email, by = "token") %>% 
+        tidyr::replace_na(list(one_cellphone = FALSE, one_valid_email = FALSE))
+      
+      data_filter <- data_filter %>% 
+        dplyr::left_join(picker_contacts, by = "token")
+      
     } else {
       params_contacts <- NULL
       vars_contacts <- NULL
@@ -89,46 +131,15 @@ mod_filters_server <- function(input, output, session, rv){
     params <- c(list_init, params_attributes, params_contacts)
     vars <- c("survey_title", "optout", "completed", vars_attributes, vars_contacts)
     
-    one_cellphone <- rv$dt_participants_contacts %>% 
-      dplyr::filter(stringr::str_detect(value, "^0[67] ")) %>% 
-      dplyr::select(token) %>% 
-      unique() %>% 
-      dplyr::mutate(one_cellphone = TRUE)
-    
-    one_valid_email <- rv$dt_participants_contacts %>% 
-      dplyr::filter(key == "email") %>% 
-      dplyr::semi_join(
-        rv$dt_email_validation %>% 
-          dplyr::filter(status %in% c("valid", "unknown")),
-        by = c("value" = "email")
-      ) %>% 
-      dplyr::select(token) %>% 
-      unique() %>% 
-      dplyr::mutate(one_valid_email = TRUE)
-    
-    picker_contacts <- rv$dt_participants %>% 
-      dplyr::select(token) %>% 
-      dplyr::left_join(one_cellphone, by = "token") %>% 
-      dplyr::left_join(one_valid_email, by = "token") %>% 
-      tidyr::replace_na(list(one_cellphone = FALSE, one_valid_email = FALSE))
-    
     # shinyWidgets::selectizeGroupServer does not accept column names with space
-    rv$dt_participants_filter <- callModule(
+    rv$df_participants_filter_norm <- callModule(
       module = shinyWidgets::selectizeGroupServer,
       id = "filter_attributes",
-      data = rv$dt_participants %>% 
-        dplyr::left_join(rv$dt_surveys, by = "survey_id") %>% 
-        dplyr::left_join(
-          golem::get_golem_options("cron_responses") %>% 
-            impexp::r_import(),
-          by = c("survey_id", "token")
-        ) %>% 
-        dplyr::left_join(picker_contacts, by = "token") %>% 
-        patchr::normalise_colnames() %>% 
+      data = data_filter %>% 
         dplyr::mutate_if(is.logical, as.character),
       vars = vars
     )
-
+    
     shinyWidgets::selectizeGroupUI(
       ns("filter_attributes"),
       params = params,
@@ -137,15 +148,28 @@ mod_filters_server <- function(input, output, session, rv){
 
   })
 
+  rv$df_participants_filter <- reactive({
+    
+    rv$df_participants_filter_norm() %>% 
+      patchr::rename(
+        rv$df_participants_attributes %>% 
+          dplyr::mutate(column = patchr::str_normalise_colnames(description)) %>% 
+          dplyr::filter(column != description) %>% 
+          dplyr::select(column, rename = description),
+        drop = FALSE
+      )
+      
+  })
+  
   output$picker_attributes <- renderUI({
 
-    req(nrow(rv$dt_participants_attributes) >= 1)
+    req(nrow(rv$df_participants_attributes) >= 1)
 
     # id Important to be finished by '-selectized' !
     shinyWidgets::pickerInput(
       ns("attributes-selectized"),
       label = "Set attributes as filters",
-      choices = rv$dt_participants_attributes$description,
+      choices = rv$df_participants_attributes$description,
       multiple = TRUE,
       options = list(
         "showTick" = TRUE,
@@ -153,14 +177,14 @@ mod_filters_server <- function(input, output, session, rv){
         "dropdown-align-right" = TRUE
       ),
       choicesOpt = list(
-        subtext = paste("- ", rv$dt_participants_attributes$attribute)
+        subtext = paste("- ", rv$df_participants_attributes$attribute)
       )
     )
   })
   
   output$picker_contacts <- renderUI({
 
-    req(nrow(rv$dt_participants_contacts) >= 1)
+    req(nrow(rv$df_participants_contacts) >= 1)
 
     # id Important to be finished by '-selectized' !
     shinyWidgets::pickerInput(
@@ -178,4 +202,4 @@ mod_filters_server <- function(input, output, session, rv){
   
   rv$filter_inputs <- input
 
-  }
+}

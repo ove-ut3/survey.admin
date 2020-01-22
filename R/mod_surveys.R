@@ -30,7 +30,7 @@ mod_surveys_server <- function(input, output, session, rv){
   
   output$ui <- renderUI({
     
-    config_limesurvey <- rv$dt_config %>% 
+    config_limesurvey <- rv$df_config %>% 
       split(f = .$key, x = .$value)
     
     try <- tryCatch(
@@ -42,8 +42,9 @@ mod_surveys_server <- function(input, output, session, rv){
       !all(
         isTRUE(nchar(config_limesurvey[["lime_api"]]) >= 1),
         isTRUE(nchar(config_limesurvey[["lime_username"]]) >= 1),
-        isTRUE(nchar(config_limesurvey[["lime_password"]]) >= 1),
-        !"error" %in% class(try)
+        isTRUE(nchar(config_limesurvey[["lime_password"]]) >= 1)
+        #,
+        #!"error" %in% class(try)
       )
     ) {
       
@@ -81,7 +82,7 @@ mod_surveys_server <- function(input, output, session, rv){
   output$picker_surveys <- renderUI({
     
     list_surveys_update <- list_surveys() %>% 
-      dplyr::anti_join(rv$dt_surveys, by = "survey_id")
+      dplyr::anti_join(rv$df_surveys, by = "survey_id")
     
     shinyWidgets::pickerInput(
       ns("selected_survey_picker"), 
@@ -106,16 +107,19 @@ mod_surveys_server <- function(input, output, session, rv){
   observeEvent(input$import_surveys, {
 
     add_surveys <- list_surveys() %>%
-      dplyr::anti_join(rv$dt_surveys, by = "survey_id") %>% 
+      dplyr::anti_join(rv$df_surveys, by = "survey_id") %>% 
       dplyr::filter(survey_title %in% input[["selected_survey_picker"]])
 
     if (nrow(add_surveys) >= 1) {
       
-      rv$dt_surveys <- dplyr::bind_rows(rv$dt_surveys, add_surveys)
+      rv$df_surveys <- dplyr::bind_rows(
+        rv$df_surveys, 
+        add_surveys
+      )
       
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"), 
-        rv$dt_surveys, 
+        rv$df_surveys, 
         table_name = "surveys", 
         overwrite = TRUE
       )
@@ -128,7 +132,10 @@ mod_surveys_server <- function(input, output, session, rv){
         dplyr::pull(value) %>% 
         stringr::str_remove("admin/remotecontrol$")
       
-      add_participants <- limer::get_participants(add_surveys$survey_id, all_attributes = TRUE) %>% 
+      add_participants <- limer::get_participants(
+        add_surveys$survey_id,
+        all_attributes = TRUE
+      ) %>% 
         dplyr::select(-email) %>% 
         dplyr::mutate(
           surveyurl = glue::glue("{domain_limesurvey}{survey_id}?token={token}") %>% 
@@ -137,23 +144,26 @@ mod_surveys_server <- function(input, output, session, rv){
             as.character()
         )
       
-      rv$dt_participants <- dplyr::bind_rows(rv$dt_participants, add_participants)
+      rv$df_participants <- dplyr::bind_rows(
+        rv$df_participants,
+        add_participants
+      )
       
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"), 
-        rv$dt_participants, 
+        rv$df_participants, 
         table_name = "participants", 
         overwrite = TRUE
       )
       
-      rv$dt_participants_attributes <- dplyr::tibble(
+      rv$df_participants_attributes <- dplyr::tibble(
         survey_id = add_surveys$survey_id,
         attribute = purrr::map(add_surveys$survey_id, ~ names(limer::get_attributes_descriptions(.))),
         description = purrr::map(add_surveys$survey_id, limer::get_attributes_descriptions)
       ) %>% 
         tidyr::unnest(c(attribute, description)) %>% 
         dplyr::bind_rows(
-          rv$dt_participants_attributes %>% 
+          rv$df_participants_attributes %>% 
             tidyr::separate_rows(survey_id, sep = ";")
         ) %>% 
         dplyr::group_by(attribute, description) %>% 
@@ -162,12 +172,12 @@ mod_surveys_server <- function(input, output, session, rv){
       
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"), 
-        rv$dt_participants_attributes, 
+        rv$df_participants_attributes, 
         table_name = "participants_attributes", 
         overwrite = TRUE
       )
       
-      rv$dt_participants_attributes <- rv$dt_participants_attributes %>% 
+      rv$df_participants_attributes <- rv$df_participants_attributes %>% 
         dplyr::mutate(num_attribute = as.integer(stringr::str_match(attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
         dplyr::arrange(num_attribute)
       
@@ -179,13 +189,13 @@ mod_surveys_server <- function(input, output, session, rv){
 
   output$dt_surveys <- DT::renderDT({
     
-    data <- rv$dt_surveys
+    data <- rv$df_surveys
     
     if (nrow(data) >= 1) {
       
       data <- data %>% 
         dplyr::left_join(
-          rv$dt_participants %>% 
+          rv$df_participants %>% 
             dplyr::count(survey_id) %>% 
             dplyr::rename(participants = n),
           by = "survey_id") %>% 
@@ -213,69 +223,77 @@ mod_surveys_server <- function(input, output, session, rv){
   
   observeEvent(input$remove, {
 
-    if (!is.null(input[["dt_surveys_rows_selected"]])) {
+    req(input$dt_surveys_rows_selected)
+    
+    selected_survey_id <- rv$df_surveys$survey_id[as.numeric(input[["dt_surveys_rows_selected"]])]
 
-      selected_survey_id <- rv$dt_surveys$survey_id[as.numeric(input[["dt_surveys_rows_selected"]])]
+    paste_survey_id <- paste(selected_survey_id, collapse = "\", \"")
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("DELETE FROM surveys WHERE survey_id IN (\"{paste_survey_id});")
+    )
 
-      impexp::sqlite_execute_sql(
-        golem::get_golem_options("sqlite_base"),
-        glue::glue("DELETE FROM surveys WHERE survey_id IN ({paste0(selected_survey_id, collapse = ", ")});")
-      )
-
-      rv$dt_surveys <- impexp::sqlite_import(
-        golem::get_golem_options("sqlite_base"), 
-        "surveys"
-      )
-      
-      if (nrow(rv$dt_surveys) == 0) {
-        cron_responses(operation = "remove")
-      }
-      
-      rv$dt_participants_attributes <- rv$dt_participants_attributes %>% 
-        tidyr::separate_rows(survey_id, sep = ";") %>% 
-        dplyr::filter(!survey_id %in% !!selected_survey_id)
-      
-      impexp::sqlite_export(
-        golem::get_golem_options("sqlite_base"),
-        rv$dt_participants_attributes,
-        "participants_attributes",
-        overwrite = TRUE
-      )
-      
-      rv$dt_participants <- rv$dt_participants %>% 
-        dplyr::filter(!survey_id %in% !!selected_survey_id) %>% 
-        dplyr::select(survey_id, tid, firstname, lastname, token, rv$dt_participants_attributes$description)
-      
-      impexp::sqlite_export(
-        golem::get_golem_options("sqlite_base"),
-        rv$dt_participants,
-        "participants",
-        overwrite = TRUE
-      )
-
+    rv$df_surveys <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"), 
+      "surveys"
+    )
+    
+    if (nrow(rv$df_surveys) == 0) {
+      cron_responses(operation = "remove")
     }
+    
+    rv$df_participants_attributes <- rv$df_participants_attributes %>% 
+      tidyr::separate_rows(survey_id, sep = ";") %>% 
+      dplyr::filter(!survey_id %in% !!selected_survey_id)
+    
+    impexp::sqlite_export(
+      golem::get_golem_options("sqlite_base"),
+      rv$df_participants_attributes,
+      "participants_attributes",
+      overwrite = TRUE
+    )
+    
+    rv$df_participants <- rv$df_participants %>% 
+      dplyr::filter(!survey_id %in% !!selected_survey_id) %>% 
+      dplyr::select(survey_id, tid, firstname, lastname, token, rv$df_participants_attributes$description)
+    
+    impexp::sqlite_export(
+      golem::get_golem_options("sqlite_base"),
+      rv$df_participants,
+      "participants",
+      overwrite = TRUE
+    )
 
   })
 
   output$surveys_ui <- renderUI({
   
     tagList(
-      div(style="display: inline-block; vertical-align:top;", 
-          uiOutput(ns("picker_surveys"))
+      div(
+        style = "display: inline-block; vertical-align:top;", 
+        uiOutput(ns("picker_surveys"))
       ),
-      div(style="display: inline-block; vertical-align:top;", 
-          actionButton(ns("import_surveys"), "Import selected surveys")
+      div(
+        style = "display: inline-block; vertical-align:top;", 
+        actionButton(
+          ns("import_surveys"),
+          "Import selected surveys"
+        )
       ),
       DT::dataTableOutput(ns("dt_surveys")),
       div("", style = "height: 10px;"),
-      actionButton(ns("remove"), "Remove selected surveys")
+      actionButton(
+        ns("remove"),
+        "Remove selected surveys"
+      )
     )
     
   })
   
   output$dt_attributes <- DT::renderDT({
     
-    rv$dt_participants_attributes %>% 
+    rv$df_participants_attributes %>% 
       DT::datatable(
         options = list(
           dom = "rtp"

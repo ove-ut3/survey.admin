@@ -17,29 +17,52 @@ mod_linkedin_ui <- function(id){
   ns <- NS(id)
   tagList(
     fluidRow(
-      box(
-        title = "Participants", width = 10,
-        DT::DTOutput(ns("dt_participants"))
+      column(
+        width = 12,
+        fluidRow(
+            shinydashboardPlus::boxPlus(
+            title = "Participants", width = 12,
+            column(
+              12, DT::DTOutput(ns("dt_participants"))
+            ),
+            enable_sidebar = TRUE,
+            sidebar_icon = "columns",
+            sidebar_title = "Add columns",
+            sidebar_width = 30,
+            sidebar_content = uiOutput(ns("select_attributes"))
+          )
+        )
       ),
-      box(
-        title = "Search participant", width = 2,
-        uiOutput(ns("search")),
-        uiOutput(ns("search_suffix"))
+      column(
+        width = 6,
+        fluidRow(
+          box(
+            width = 12,
+            div(
+              style = "display: inline-block;",
+              uiOutput(ns("ui_search_button"))
+            ),
+            div(
+              style = "display: inline-block;",
+              uiOutput(ns("ui_search_suffix"))
+            )
+          ),
+          box(
+          title = "Invitation text", width = 12,
+          uiOutput(ns("ui_invitation_text")),
+          uiOutput(ns("ui_clipbutton_invitation_text"))
+          )
+        )
       ),
-      box(
-        title = "Invitation text", width = 2,
-        uiOutput(ns("invitation_fr")),
-        uiOutput(ns("invitation_en")),
-        fluidRow(div(style = "height: 15px;", "")),
-        uiOutput(ns("save_invitation"))
-      ),
-      box(
-        title = "Survey text", width = 2,
-        uiOutput(ns("survey_link_fr")),
-        uiOutput(ns("survey_link_en")),
-        uiOutput(ns("survey_link_fr_2")),
-        fluidRow(div(style = "height: 15px;", "")),
-        uiOutput(ns("save_survey_link"))
+      column(
+        width = 6,
+        fluidRow(
+          box(
+            title = "Survey text", width = 12,
+            uiOutput(ns("ui_survey_text")),
+            uiOutput(ns("ui_clipbutton_survey_text"))
+          )
+        )
       )
     )
   )
@@ -54,19 +77,54 @@ mod_linkedin_ui <- function(id){
 mod_linkedin_server <- function(input, output, session, rv){
   ns <- session$ns
   
-  output$dt_participants <- DT::renderDataTable({
+  output$select_attributes <- renderUI({
     
-    rv$dt_participants_filter() %>%
-      dplyr::select(token, firstname, lastname, libelle_diplome) %>%
+    selected <- rv$df_linkedin %>% 
+      dplyr::filter(key == "dt_attributes") %>% 
+      tidyr::separate_rows(value, sep = ";") %>% 
+      dplyr::pull(value)
+    
+    shinyWidgets::pickerInput(
+      ns("picker_select_attributes"),
+      label = "Additional fields",
+      choices = rv$df_participants_attributes$description,
+      selected = selected,
+      multiple = TRUE,
+      options = list(
+        "showTick" = TRUE,
+        "actions-box" = TRUE,
+        "dropdown-align-right" = TRUE
+      ),
+      choicesOpt = list(
+        subtext = paste("- ", rv$df_participants_attributes$attribute))
+    )
+    
+  })
+  
+  output$dt_participants <- DT::renderDT({
+    
+    rv$df_participants_filter() %>%
+      dplyr::select(token, firstname, lastname, optout, completed, input[["picker_select_attributes"]]) %>%
       DT::datatable(
         selection = list(mode = 'single', selected = 1),
         rownames = FALSE,
         options = list(
           pageLength = -1,
           dom = 'rft',
-          scrollY = '75vh'
+          scrollY = '40vh'
         )
       )
+    
+  })
+  
+  observeEvent(input$picker_select_attributes, ignoreNULL = FALSE, ignoreInit = TRUE, {
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE linkedin SET value = \"{paste0(input$picker_select_attributes, collapse = ';')}\" WHERE key = \"dt_attributes\";")
+    )
+    
+    rv$df_linkedin <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "linkedin")
     
   })
   
@@ -82,287 +140,336 @@ mod_linkedin_server <- function(input, output, session, rv){
     
   })
   
-  output$search <- renderUI({
+  output$ui_search_button <- renderUI({
     
     req(input$dt_participants_rows_selected)
     
-    linkedin <- rv$dt_participants_filter() %>%
+    linkedin <- rv$df_participants_filter() %>%
       dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
     
-    actionButton(ns("button_search"), "Search", icon = icon("search"), onclick = paste0("window.open('", paste0("https://www.linkedin.com/search/results/index/?keywords=", linkedin$firstname, "%20", linkedin$lastname, "%20", input$search_suffix_text), "', '_blank')"))
+    rv$linkedin_search_suffix_text <- rv$df_linkedin %>%
+      dplyr::filter(key == "search_text_input") %>% 
+      dplyr::pull(value)
+    
+    actionButton(
+      ns("button_search"),
+      "Search",
+      icon = icon("search"),
+      onclick = paste0("window.open('", paste0("https://www.linkedin.com/search/results/all/?keywords=", linkedin$firstname, "%20", linkedin$lastname, "%20", input$search_suffix_text), "', '_blank')")
+    )
     
   })
   
-  # observeEvent(input$search_suffix_text, {
-  # 
-  #   browser()
-  # 
-  #   impexp::sqlite_execute_sql(
-  #     golem::get_golem_options("sqlite_base"),
-  #     paste0("UPDATE linkedin SET search_text_input = \"", input$search_suffix_text, "\";")
-  #   )
-  # 
-  # })
-  
-  output$search_suffix <- renderUI({
-
+  output$ui_search_suffix <- renderUI({
+    
     req(input$dt_participants_rows_selected)
-
-    value <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "linkedin") %>%
+    
+    rv$linkedin_search_suffix_text <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "linkedin"
+    ) %>% 
+      dplyr::filter(key == "search_text_input") %>% 
       dplyr::pull(value)
-
+    
     textInput(
       ns("search_suffix_text"),
       label = NULL,
-      value = value,
+      value = isolate(rv$linkedin_search_suffix_text),
       placeholder = "Search suffix (for example, a city to filter results)"
+      
     )
 
   })
   
-  output$invitation_fr <- renderUI({
+  observeEvent(input$dt_participants_rows_selected, {
     
     req(input$dt_participants_rows_selected)
     
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-    
-    lib_type_diplome <- stringr::str_match(linkedin$libelle_diplome, "^(\\w+) ")[, 2]
-    
-    texte <- glue::glue(
-      "Bonjour {linkedin$firstname} {linkedin$lastname},",
-      "Vous êtes {ifelse(linkedin$sexe == 'Femme', 'diplômée', 'diplômé')} de L’UPS en {lib_type_diplome} en 2017.",
-      .sep = "\n"
-    )
-    
-    if (is.na(linkedin$type_diplome_precedent)) {
-      texte <- glue::glue(
-        texte,
-        "Qu’êtes-vous {ifelse(linkedin$sexe == 'Femme', 'devenue', 'devenu')} ?",
-        "Votre parcours nous intéresse !",
-        .sep = "\n"
+    if (!is.null(input$search_suffix_text)) {
+      
+      updateTextInput(
+        session,
+        "search_suffix_text",
+        value = rv$linkedin_search_suffix_text
       )
       
-    } else {
-      texte <- glue::glue(
-        texte,
-        "L’année dernière, nous vous avions {ifelse(linkedin$sexe == 'Femme', 'interrogée', 'interrogé')} suite à votre {linkedin$type_diplome_precedent}, votre situation a-t-elle changé ?",
-        .sep = "\n"
-      )
     }
-
-    rclipboard::rclipButton(ns("button_linkedin_1"), "Invitation (fr)", iconv(texte, from = "UTF-8"), icon("clipboard"))
+    
+    if (!is.null(input$invitation_text)) {
+      
+      updateTextAreaInput(
+        session,
+        "invitation_text",
+        value = rv$linkedin_invitation_text
+      )
+      
+    }
+    
+    if (!is.null(input$survey_text)) {
+      
+      updateTextAreaInput(
+        session,
+        "survey_text",
+        value = rv$linkedin_survey_text
+      )
+      
+    }
     
   })
   
-  output$invitation_en <- renderUI({
+  observeEvent(input$search_suffix_text, {
 
-    req(input$dt_participants_rows_selected)
+    req(input$search_suffix_text != rv$linkedin_search_suffix_text)
 
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
+    rv$linkedin_search_suffix_text <- input$search_suffix_text
     
-    lib_type_diplome <- stringr::str_match(linkedin$libelle_diplome, "^(\\w+) ")[, 2]
-
-    texte <- glue::glue(
-      "Hello {linkedin$firstname} {linkedin$lastname},",
-      "You graduated at University Paul Sabatier in 2017.",
-      .sep = "\n"
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE linkedin SET value = \"{input$search_suffix_text}\" WHERE key = \"search_text_input\";")
     )
 
-    if (!is.na(linkedin$type_diplome_precedent)) {
-      texte <- glue::glue(
-        texte,
-        "Last year, you answered to our survey about your {linkedin$type_diplome_precedent}, did your situation evolve ?",
-        .sep = "\n"
-      )
-
-    } else {
-      texte <- glue::glue(
-        texte,
-        "What did you become ?",
-        "We are interested in your profile !",
-        .sep = "\n"
-      )
-    }
-
-    rclipboard::rclipButton(ns("button_linkedin_1_en"), "Invitation (en)", texte, icon("clipboard"))
-
   })
   
-  output$save_invitation <- renderUI({
+  output$ui_invitation_text <- renderUI({
     
     req(input$dt_participants_rows_selected)
     
-    actionButton(ns("button_save_invitation"), "Save invitation", icon = icon("save"))
-    
-  })
-  
-  observeEvent(input$button_save_invitation, {
-    
-    req(input$dt_participants_rows_selected)
-    
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-    
-    event <- dplyr::tibble(
-      token = linkedin$token,
-      type = "linkedin",
-      comment = "invitation",
-      date = as.character(lubridate::today())
+    rv$linkedin_invitation_text <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "linkedin"
     ) %>% 
-      dplyr::anti_join(
-        impexp::sqlite_import(
-          golem::get_golem_options("sqlite_base"),
-          "participants_events"
+      dplyr::filter(key == "invitation_text") %>% 
+      dplyr::pull(value) %>% 
+      stringr::str_replace_all("''", "'")
+
+    tagList(
+      column(
+        width = 10,
+        textAreaInput(
+          ns("invitation_text"),
+          label = NULL, 
+          height = "150px", 
+          value = isolate(rv$linkedin_invitation_text), 
+          placeholder = "My invitation text"
         ),
-        by = c("token", "type", "comment")
+        div(
+          style = "display: inline-block; vertical-align: top;",
+          fileInput(ns("import_invitation_text"), label = NULL, buttonLabel = "Import invitation text")
+        ),
+        div(
+          style = "display: inline-block; vertical-align: top;",
+          downloadButton(ns("export_invitation_text"), "Export invitation text", icon = icon("file-export"))
+        )
+      )
+    )
+    
+  })
+  
+  output$ui_clipbutton_invitation_text <- renderUI({
+    
+    req(
+      input$dt_participants_rows_selected,
+      input$invitation_text
+    )
+    
+    #"Bonjour {firstname} {lastname},\nVous êtes {ifelse({Sexe} == 'Femme', 'diplômée', 'diplômé')} de L'UPS en 2017 en {Libellé diplôme}.\n{ifelse(is.na({Type diplôme précédent}),\"Qu'êtes-vous {ifelse({Sexe} == 'Femme', 'devenue', 'devenu')} ?\nVotre parcours nous intéresse !\",\"L'année dernière, nous vous avions {ifelse({Sexe} == 'Femme', 'interrogée', 'interrogé')} suite à votre {Type diplôme précédent}, votre situation a-t-elle changé ?\"}" %>%
+    
+    df_linkedin_fiter <- dplyr::filter(rv$df_participants_filter(), dplyr::row_number() == input$dt_participants_rows_selected)
+    
+    clipButton_text <- input$invitation_text %>%
+      survey.admin::escape_space_glue(
+        rv$df_participants_attributes %>% 
+          tidyr::separate_rows(survey_id, sep = ";") %>% 
+          dplyr::filter(survey_id == df_linkedin_fiter$survey_id)
       )
     
-    if (nrow(event) == 1) {
-      
-      impexp::sqlite_append_rows(
-        golem::get_golem_options("sqlite_base"),
-        event,
-        "participants_events"
-      )
-      
-      rv$dt_participants_events <- dplyr::bind_rows(
-        rv$dt_participants_events,
-        event
-      )
-      
+    try <- tryCatch(
+      glue::glue_data(
+        clipButton_text,
+        .x = df_linkedin_fiter
+      ),
+      error = function(e) e
+    )
+    
+    if ("error" %in% class(try)) {
+      clipButton_text <- NULL
+    } else {
+      clipButton_text <- iconv(try, from = "UTF-8")
     }
     
-  })
-  
-  # Placé avant survey_fr car ça bugue sinon...
-  output$survey_link_en <- renderUI({
-
-    req(input$dt_participants_rows_selected)
-    
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-
-    lib_type_diplome <- stringr::str_match(linkedin$libelle_diplome, "^(\\w+) ")[, 2]
-    
-    texte <- glue::glue(
-      "Hello {linkedin$firstname} {linkedin$lastname},",
-      
-      "The University Toulouse Paul Sabatier carries a survey about the profile of the {lib_type_diplome} graduated students in 2017, in order to know better what they did since they got thier diploma. The outcomes of this survey are very useful in order to inform the students interested by the {lib_type_diplome} degree  you passed two years ago.",
-      
-      "We take the liberty of contacting you to participate in this study that will only take you a few minuts:\n{linkedin$surveyurl}{ifelse(lib_type_diplome %in% c('LP', 'Master'), 'lang=en&', '')}",
-      
-      # "If you encounter any difficulty, feel free to contact us at +335.61.55.82.27 from Monday to Friday, from 2 pm to 8 pm from 14 to 25 january and from 28 january from 9 am to 6 pm . We will be happy to help you.",
-      
-      "Best regards and all the best in your projects.",
-      
-      "The University Paul Sabatier Team", .sep = "\n\n"
+    tagList(
+      column(
+        width = 2,
+        rclipboard::rclipButton(ns("copy_invitation_text"), HTML("Copy<br/>invitation<br/>text"), clipButton_text, icon("clipboard"))
+      )
     )
-
-    rclipboard::rclipButton(ns("button_linkedin_2_en"), "Survey link (en)", texte, icon("clipboard"))
-
-  })
-
-  output$survey_link_fr <- renderUI({
-
-    req(input$dt_participants_rows_selected)
-
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-
-    lib_type_diplome <- stringr::str_match(linkedin$libelle_diplome, "^(\\w+) ")[, 2]
-    
-    texte <- glue::glue(
-      "Bonjour {linkedin$firstname} {linkedin$lastname},",
-      
-      "L’OVE de l’Université Paul Sabatier interroge, dans le cadre d’une étude nationale, les anciens diplômés de {lib_type_diplome} en 2017 afin de connaître leur parcours depuis l’obtention de ce diplôme. Le résultat de cette enquête est précieux afin d’informer les étudiants intéressés par la formation que vous avez suivie il y a 2 ans.",
-      
-      "Nous nous permettons de solliciter votre participation à cette étude qui ne vous prendra que quelques minutes :\n{linkedin$surveyurl}",
-      
-      # "Si vous rencontrez des difficultés, n'hésitez pas à nous contacter au 05.61.55.82.27 du lundi au vendredi de 14h à 20h du 14 au 25/01/2019 puis à partir du 28/01/2019 de 9 h à 18 h. Nous serons ravis de pouvoir vous porter assistance.",
-      
-      "Bien à vous et bonne continuation dans tous vos projets.",
-      
-      "L'équipe de l'Observatoire de la Vie Etudiante de l'Université Toulouse III - Paul Sabatier", .sep = "\n\n"
-    )
-
-    rclipboard::rclipButton(ns("button_linkedin_2"), "Survey link (fr)", iconv(texte, from = "UTF-8"), icon("clipboard"))
-
-  })
-
-  output$survey_link_fr_2 <- renderUI({
-
-    req(input$dt_participants_rows_selected)
-
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-
-    lib_type_diplome <- stringr::str_match(linkedin$libelle_diplome, "^(\\w+) ")[, 2]
-    
-    texte <- glue::glue(
-      "Bonjour {linkedin$firstname} {linkedin$lastname},",
-      
-      "Merci beaucoup de votre retour.",
-      
-      "Pour que notre étude soit optimale, nous vous invitons à répondre à notre questionnaire :\n{linkedin$surveyurl}",
-      
-      # "Si vous rencontrez des difficultés, n'hésitez pas à nous contacter au 05.61.55.82.27 du lundi au vendredi de 14h à 20h du 14 au 25/01/2019 puis à partir du 28/01/2019 de 9 h à 18 h. Nous serons ravis de pouvoir vous porter assistance.",
-      
-      "Bien à vous et bonne continuation dans tous vos projets.",
-      
-      "L'équipe de l'Observatoire de la Vie Etudiante de l'Université Toulouse III - Paul Sabatier", .sep = "\n\n"
-    )
-
-    rclipboard::rclipButton(ns("button_linkedin_3"), HTML("Survey link (fr)<br/>(parcours exposé)"), iconv(texte, from = "UTF-8"), icon("clipboard"))
-
-  })
-  
-  output$save_survey_link <- renderUI({
-    
-    req(input$dt_participants_rows_selected)
-    
-    actionButton(ns("button_save_survey_link"), "Save survey link", icon = icon("save"))
     
   })
   
-  observeEvent(input$button_save_survey_link, {
+  observeEvent(input$invitation_text, {
+    
+    req(input$invitation_text != rv$linkedin_invitation_text)
+    
+    rv$linkedin_invitation_text <- input$invitation_text
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE linkedin SET value = \"{input$invitation_text}\" WHERE key = \"invitation_text\";")
+    )
+
+  })
+  
+  observeEvent(input$import_invitation_text, {
+    
+    req(input$import_invitation_text)
+    
+    invitation_text <- input$import_invitation_text$datapath %>% 
+      readLines(encoding = "UTF-8") %>% 
+      paste(collapse = "\n")
+    
+    rv$linkedin_invitation_text <- invitation_text
+    
+    updateTextAreaInput(
+      session,
+      "invitation_text",
+      value = invitation_text
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE linkedin SET value = \"{invitation_text}\" WHERE key = \"invitation_text\";")
+    )
+    
+  })
+  
+  output$export_invitation_text <- downloadHandler(
+    filename = function() {
+      "invitation_text.txt"
+    },
+    content = function(con) {
+      input$invitation_text %>% 
+        writeLines(con, useBytes = TRUE)
+    }
+  )
+  
+  output$ui_survey_text <- renderUI({
     
     req(input$dt_participants_rows_selected)
     
-    linkedin <- rv$dt_participants_filter() %>%
-      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
-    
-    event <- dplyr::tibble(
-      token = linkedin$token,
-      type = "linkedin",
-      comment = "survey_link",
-      date = as.character(lubridate::today())
+    rv$linkedin_survey_text <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "linkedin"
     ) %>% 
-      dplyr::anti_join(
-        impexp::sqlite_import(
-          golem::get_golem_options("sqlite_base"),
-          "participants_events"
-        ),
-        by = c("token", "type", "comment")
-      )
+      dplyr::filter(key == "survey_text") %>% 
+      dplyr::pull(value) %>% 
+      stringr::str_replace_all("''", "'")
     
-    if (nrow(event) == 1) {
-      
-      impexp::sqlite_append_rows(
-        golem::get_golem_options("sqlite_base"),
-        event,
-        "participants_events"
+    tagList(
+      column(
+        width = 10,
+        textAreaInput(
+          ns("survey_text"),
+          label = NULL,
+          height = "150px",
+          value = isolate(rv$linkedin_survey_text),
+          placeholder = "My survey text"
+        ),
+        div(
+          style = "display: inline-block; vertical-align: top;",
+          fileInput(ns("import_survey_text"), label = NULL, buttonLabel = "Import survey text")
+        ),
+        div(
+          style = "display: inline-block; vertical-align: top;",
+          downloadButton(ns("export_survey_text"), "Export survey text", icon = icon("file-export"))
+        )
       )
-      
-      rv$dt_participants_events <- dplyr::bind_rows(
-        rv$dt_participants_events,
-        event
-      )
-      
-    }
-
+    )
+    
   })
   
+  output$ui_clipbutton_survey_text <- renderUI({
+    
+    req(
+      input$dt_participants_rows_selected,
+      input$survey_text
+    )
+    
+    df_linkedin_fiter <- dplyr::filter(rv$df_participants_filter(), dplyr::row_number() == input$dt_participants_rows_selected)
+    
+    clipButton_text <- input$survey_text %>%
+      survey.admin::escape_space_glue(
+        rv$df_participants_attributes %>% 
+          tidyr::separate_rows(survey_id, sep = ";") %>% 
+          dplyr::filter(survey_id == df_linkedin_fiter$survey_id)
+      )
+
+    try <- tryCatch(
+      glue::glue_data(
+        clipButton_text,
+        .x = df_linkedin_fiter
+      ),
+      error = function(e) e
+    )
+
+    if ("error" %in% class(try)) {
+      clipButton_text <- NULL
+    } else {
+      clipButton_text <- iconv(try, from = "UTF-8")
+    }
+    
+    tagList(
+      column(
+        width = 2,
+        rclipboard::rclipButton(ns("copy_survey_text"), HTML("Copy<br/>survey<br/>text"), clipButton_text, icon("clipboard"))
+      )
+    )
+    
+  })
+  
+  observeEvent(input$survey_text, {
+    
+    req(input$survey_text != rv$linkedin_survey_text)
+    
+    rv$linkedin_survey_text <- input$survey_text
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE linkedin SET value = \"{input$survey_text}\" WHERE key = \"survey_text\";")
+    )
+    
+  })
+  
+  observeEvent(input$import_survey_text, {
+    
+    req(input$import_survey_text)
+    
+    survey_text <- input$import_survey_text$datapath %>% 
+      readLines(encoding = "UTF-8") %>% 
+      paste(collapse = "\n")
+    
+    rv$linkedin_survey_text <- survey_text
+    
+    updateTextAreaInput(
+      session,
+      "survey_text",
+      value = survey_text
+    )
+    
+    impexp::sqlite_execute_sql(
+      golem::get_golem_options("sqlite_base"),
+      glue::glue("UPDATE linkedin SET value = \"{survey_text}\" WHERE key = \"survey_text\";")
+    )
+    
+  })
+  
+  output$export_survey_text <- downloadHandler(
+    filename = function() {
+      "survey_text.txt"
+    },
+    content = function(con) {
+      input$survey_text %>% 
+        writeLines(con, useBytes = TRUE)
+    }
+  )
   
 }

@@ -7,13 +7,7 @@ run_app <- function(sqlite_base, cron_responses, credentials) {
   with_golem_options(
     app = shinyApp(
       ui = app_ui(), 
-      server = app_server,
-      onStart = function() {
-        onStop(function() {
-          cat(file = stderr(), "Releasing limer session key", "\n")
-          release <- limer::release_session_key()
-        })
-      }
+      server = app_server
     ), 
     golem_opts = list(sqlite_base = sqlite_base, cron_responses = cron_responses, credentials = credentials)
   )

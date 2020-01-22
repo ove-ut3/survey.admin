@@ -34,7 +34,7 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
   
   output$input_text_lime_api <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "lime_api") %>% 
       dplyr::pull(value)
     
@@ -49,25 +49,35 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
   
   output$input_text_lime_username <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "lime_username") %>% 
       dplyr::pull(value)
     
     options(lime_username = value)
     
-    textInput(ns("lime_username"), "Limesurvey username", value = value, placeholder = "username")
+    textInput(
+      ns("lime_username"),
+      "Limesurvey username",
+      value = value,
+      placeholder = "username"
+      )
     
   })
   
   output$input_text_lime_password <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "lime_password") %>% 
       dplyr::pull(value)
     
     options(lime_password = value)
     
-    textInput(ns("lime_password"), "Limesurvey password", value = value, placeholder = "password")
+    textInput(
+      ns("lime_password"),
+      "Limesurvey password",
+      value = value,
+      placeholder = "password"
+    )
     
   })
   
@@ -75,25 +85,25 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$lime_api,'" WHERE key = "lime_api";')
+      glue::glue("UPDATE config SET value = \"{input$lime_api}\" WHERE key = \"lime_api\";")
     )
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$lime_username,'" WHERE key = "lime_username";')
+      glue::glue("UPDATE config SET value = \"{input$lime_username}\" WHERE key = \"lime_username\";")
     )
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$lime_password,'" WHERE key = "lime_password";')
+      glue::glue("UPDATE config SET value = \"{input$lime_password}\" WHERE key = \"lime_password\";")
     )
     
-    rv$dt_config <- dplyr::tibble(
+    rv$df_config <- dplyr::tibble(
       key = c("lime_api", "lime_username", "lime_password"),
       value = c(input$lime_api, input$lime_username, input$lime_password)
     ) %>% 
       patchr::anti_join_bind(
-        rv$dt_config,
+        rv$df_config,
         by= "key"
       )
     

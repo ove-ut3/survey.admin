@@ -36,7 +36,7 @@ mod_config_api_server <- function(input, output, session, rv){
   
   output$input_text_api_key_bulkemailchecker <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "api_key_bulkemailchecker") %>% 
       dplyr::pull(value)
     
@@ -46,7 +46,7 @@ mod_config_api_server <- function(input, output, session, rv){
   
   output$input_text_api_key_listflow <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "api_key_listflow") %>% 
       dplyr::pull(value)
     
@@ -56,7 +56,7 @@ mod_config_api_server <- function(input, output, session, rv){
   
   output$input_text_api_key_quickemailverification <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "api_key_quickemailverification") %>% 
       dplyr::pull(value)
     
@@ -67,7 +67,7 @@ mod_config_api_server <- function(input, output, session, rv){
   
   output$input_text_api_key_emailmarker <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "api_key_emailmarker") %>% 
       dplyr::pull(value)
     
@@ -77,7 +77,7 @@ mod_config_api_server <- function(input, output, session, rv){
   
   output$input_text_api_key_spothit <- renderUI({
     
-    value <- rv$dt_config %>% 
+    value <- rv$df_config %>% 
       dplyr::filter(key == "api_key_spothit") %>% 
       dplyr::pull(value)
     
@@ -89,34 +89,34 @@ mod_config_api_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$api_key_bulkemailchecker,'" WHERE key = "api_key_bulkemailchecker";')
+      glue::glue("UPDATE config SET value = \"{input$api_key_bulkemailchecker}\" WHERE key = \"api_key_bulkemailchecker\";")
     )
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$api_key_listflow,'" WHERE key = "api_key_listflow";')
+      glue::glue("UPDATE config SET value = \"{input$api_key_listflow}\" WHERE key = \"api_key_listflow\";")
     )
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$api_key_quickemailverification,'" WHERE key = "api_key_quickemailverification";')
+      glue::glue("UPDATE config SET value = \"{input$api_key_quickemailverification}\" WHERE key = \"api_key_quickemailverification\";")
     )
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$api_key_emailmarker,'" WHERE key = "api_key_emailmarker";')
+      glue::glue("UPDATE config SET value = \"{input$api_key_emailmarker}\" WHERE key = \"api_key_emailmarker\";")
     )
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      paste0('UPDATE config SET value = "', input$api_key_spothit,'" WHERE key = "api_key_spothit";')
+      glue::glue("UPDATE config SET value = \"{input$api_key_spothit}\" WHERE key = \"api_key_spothit\";")
     )
     
-    rv$dt_config$value[which(rv$dt_config$key == "api_key_bulkemailchecker")] <- input$api_key_bulkemailchecker
-    rv$dt_config$value[which(rv$dt_config$key == "api_key_listflow")] <- input$api_key_listflow
-    rv$dt_config$value[which(rv$dt_config$key == "api_key_quickemailverification")] <- input$api_key_quickemailverification
-    rv$dt_config$value[which(rv$dt_config$key == "api_key_emailmarker")] <- input$api_key_emailmarker
-    rv$dt_config$value[which(rv$dt_config$key == "api_key_spothit")] <- input$api_key_spothit
+    rv$df_config$value[which(rv$df_config$key == "api_key_bulkemailchecker")] <- input$api_key_bulkemailchecker
+    rv$df_config$value[which(rv$df_config$key == "api_key_listflow")] <- input$api_key_listflow
+    rv$df_config$value[which(rv$df_config$key == "api_key_quickemailverification")] <- input$api_key_quickemailverification
+    rv$df_config$value[which(rv$df_config$key == "api_key_emailmarker")] <- input$api_key_emailmarker
+    rv$df_config$value[which(rv$df_config$key == "api_key_spothit")] <- input$api_key_spothit
     
   })
 
