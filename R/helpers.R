@@ -146,7 +146,7 @@ escape_space_glue <- function(string, participants_attributes) {
 #' 
 #' @export
 #' @keywords internal
-mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = TRUE, general = FALSE, crowdsourcing = FALSE) {
+mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, general = FALSE, crowdsourcing = FALSE) {
   
   style <- "'font-family: calibri; font-size: 11pt;'"
   body <- glue::glue("<p style={style}>{body}</p>") %>% 
