@@ -12,7 +12,7 @@ mailing(
   subject,
   body,
   sleep,
-  delete_survey = TRUE,
+  delete_survey = FALSE,
   general = FALSE,
   crowdsourcing = FALSE
 )
