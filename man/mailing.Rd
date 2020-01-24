@@ -7,18 +7,22 @@
 mailing(
   rv,
   participants,
+  participants_attributes = NULL,
   from,
   subject,
   body,
   sleep,
   delete_survey = TRUE,
-  general = FALSE
+  general = FALSE,
+  crowdsourcing = FALSE
 )
 }
 \arguments{
 \item{rv}{\dots}
 
 \item{participants}{\dots}
+
+\item{participants_attributes}{\dots}
 
 \item{from}{\dots}
 
@@ -31,6 +35,8 @@ mailing(
 \item{delete_survey}{\dots}
 
 \item{general}{\dots}
+
+\item{crowdsourcing}{\dots}
 }
 \description{
 mailing

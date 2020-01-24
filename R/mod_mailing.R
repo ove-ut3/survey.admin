@@ -372,9 +372,14 @@ mod_mailing_server <- function(input, output, session, rv){
         dplyr::filter(dplyr::row_number() %in% input[["dt_emails_rows_selected"]])
     }
     
+    participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
+      tidyr::separate_rows(survey_id, sep = ";") %>% 
+      dplyr::filter(survey_id %in% participants$survey_id)
+    
     survey.admin::mailing(
       rv,
       participants = selected_emails,
+      participants_attributes = participants_attributes,
       from = list(
         "email" = input$sender_email,
         "alias" = input$sender_alias

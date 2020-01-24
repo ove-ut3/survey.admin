@@ -72,6 +72,13 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
           div(
             style = "display: inline-block; vertical-align: top;",
             downloadButton(ns("export_mail"), "Export mail configuration", icon = icon("file-export"))
+          ),
+          div(
+            actionButton(
+              ns("send_email"),
+              "Send mails to selected emails",
+              icon = icon("paper-plane")
+            )
           )
         )
       ),
@@ -420,6 +427,65 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
         writeLines(con, useBytes = TRUE)
     }
   )
+  
+  observeEvent(input$send_email, {
+    
+    if (nchar(input$sender_email) == 0) {
+      shinyalert::shinyalert(type = "error", text = "Email sender must be filled.")
+      return()
+    }
+    
+    participants_mailing <- rv$df_crowdsourcing_contributors %>% 
+      dplyr::filter(caractr::str_validate_email(user)) %>% 
+      dplyr::mutate(email = user) %>% 
+      dplyr::mutate(lib_diplome = apogee::lib_etape(`Code.diplôme`, prefixe = "diplome", suffixe = c("ville", "option", "particularite"))) %>% 
+      dplyr::select(email = user, lib_diplome, password)
+
+    copie_destinataire <- participants_mailing %>%
+      dplyr::select(email, lib_diplome) %>%
+      dplyr::full_join(participants_mailing %>%
+                         dplyr::select(email_copie = email, lib_diplome),
+                       by = "lib_diplome") %>%
+      dplyr::filter(email != email_copie) %>%
+      dplyr::group_by(email, lib_diplome) %>%
+      dplyr::summarise(email_copie = paste0(email_copie, collapse = " ; ")) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(email_copie = glue::glue("(contacts ayant également accès à ce diplôme : {email_copie})"))
+    
+    participants_mailing <- participants_mailing %>%
+      dplyr::left_join(copie_destinataire, by = c("email", "lib_diplome")) %>%
+      dplyr::arrange(email, lib_diplome) %>%
+      dplyr::mutate(liste = caractr::str_paste(lib_diplome, " ", email_copie, sep = ''),
+                    liste = caractr::str_paste("<li>", liste, "</li>", sep = "")) %>%
+      dplyr::group_by(email, password) %>%
+      dplyr::mutate(
+        liste = ifelse(dplyr::row_number() == 1, glue::glue("<ul>{liste}"), liste),
+        liste = ifelse(dplyr::row_number() == dplyr::n(), glue::glue("{liste}</ul>"), liste)) %>%
+      dplyr::summarise(liste_formations = paste0(liste, collapse = "")) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(user = email)
+    
+    participants_attributes <- dplyr::tibble(
+      attribute = c("ATTRIBUTE_1", "ATTRIBUTE_2", "ATTRIBUTE_3"),
+      description = c("user", "password", "liste_formations")
+    )
+    
+    survey.admin::mailing(
+      rv,
+      participants = participants_mailing,
+      participants_attributes = participants_attributes,
+      from = list(
+        "email" = input$sender_email,
+        "alias" = input$sender_alias
+      ),
+      subject = input$mail_subject,
+      body = input$mail_body,
+      sleep = input$mailing_sleep,
+      general == TRUE,
+      crowdsourcing = TRUE
+    )
+    
+  })
   
   output$dt_crowdsourcing_moderation <- DT::renderDT({
     
