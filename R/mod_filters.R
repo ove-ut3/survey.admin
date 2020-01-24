@@ -157,7 +157,8 @@ mod_filters_server <- function(input, output, session, rv){
           dplyr::filter(column != description) %>% 
           dplyr::select(column, rename = description),
         drop = FALSE
-      )
+      ) %>% 
+      dplyr::mutate_at(c("completed", "optout"), as.logical)
       
   })
   

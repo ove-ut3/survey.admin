@@ -19,7 +19,7 @@ mod_phoning_ui <- function(id){
   tagList(
     fluidRow(
       column(
-        width = 4,
+        width = 5,
         fluidRow(
           box(
             title = "Team", width = 12,
@@ -51,7 +51,7 @@ mod_phoning_ui <- function(id){
         )
       ),
       column(
-        width = 8,
+        width = 7,
         fluidRow(
           box(
             title = "Groups and team", width = 12,
@@ -111,7 +111,42 @@ mod_phoning_server <- function(input, output, session, rv){
   
   output$hot_users <- rhandsontable::renderRHandsontable({
     
+    attributes_groups <- rv$df_config %>% 
+      dplyr::filter(key == "phoning_attributes_groups") %>% 
+      tidyr::separate_rows(value, sep = ";") %>% 
+      dplyr::pull(value)
+    
+    to_contact <- survey.phoning::df_groups(
+      rv$df_participants_filter() %>% 
+        dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups),
+      attributes_groups = attributes_groups,
+      user = "admin"
+    ) %>% 
+      tidyr::drop_na(user) %>% 
+      dplyr::group_by(user) %>% 
+      dplyr::summarise_at("to_contact", sum, na.rm = TRUE) %>% 
+      dplyr::ungroup()
+    
+    events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events") %>%
+      dplyr::select(user, token) %>% 
+      unique() %>% 
+      dplyr::anti_join(
+        rv$df_participants_filter() %>% 
+          dplyr::filter(!completed, !optout),
+        by = "token"
+      ) %>% 
+      dplyr::count(user, name = "events")
+    
+    remaining <- to_contact %>% 
+      dplyr::left_join(
+        events,
+        by = "user"
+      ) %>% 
+      dplyr::mutate(remaining_calls = to_contact - events) %>% 
+      dplyr::select(user, remaining_calls)
+    
     rv$df_phoning_team %>% 
+      dplyr::left_join(remaining, by = "user") %>% 
       rhandsontable::rhandsontable(rowHeaders = NULL) %>%
       rhandsontable::hot_table(highlightCol = TRUE, highlightRow = TRUE, stretchH = "all") %>%
       rhandsontable::hot_rows(rowHeights = 35) %>%
@@ -315,7 +350,6 @@ mod_phoning_server <- function(input, output, session, rv){
     }
     
     df_groups <- rv$df_participants_filter() %>% 
-      dplyr::mutate_at(c("completed", "optout"), as.logical) %>% 
       dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
       survey.phoning::df_groups(c("survey_id", attributes_groups, "admin")) %>% 
       dplyr::select(-to_contact, -user) %>% 
@@ -401,7 +435,6 @@ mod_phoning_server <- function(input, output, session, rv){
       dplyr::pull(value)
     
     groups <- rv$df_participants_filter() %>% 
-      dplyr::mutate_at(c("completed", "optout"), as.logical) %>% 
       dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
       survey.phoning::df_groups(attributes_groups, user = "admin") %>% 
       dplyr::select_at(c(attributes_groups, "to_contact"))
@@ -442,7 +475,7 @@ mod_phoning_server <- function(input, output, session, rv){
       rhandsontable::rhandsontable(rowHeaders = NULL) %>%
       rhandsontable::hot_table(highlightCol = TRUE, highlightRow = TRUE, stretchH = "all") %>%
       rhandsontable::hot_rows(rowHeights = 35) %>%
-      rhandsontable::hot_cols(valign = "htMiddle") %>% 
+      rhandsontable::hot_cols(valign = "htMiddle", colWidths = c(100, 15, 15, 15)) %>% 
       rhandsontable::hot_col(col = "user", type = "dropdown", source = users) %>% 
       rhandsontable::hot_col(col = c(attributes_groups, "to_contact"), readOnly = TRUE)
 
