@@ -74,6 +74,16 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
             downloadButton(ns("export_mail"), "Export mail configuration", icon = icon("file-export"))
           ),
           div(
+            style = "display: inline-block; width: 50%;", # vertical-align: middle;
+            numericInput(
+              ns("mailing_sleep"),
+              "Sleep time in seconds between each mail",
+              value = 7,
+              min = 0
+            )
+          ),
+          div(
+            style = "display: inline-block;", # vertical-align: middle;
             actionButton(
               ns("send_email"),
               "Send mails to selected emails",
@@ -222,7 +232,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       DT::datatable(
         rownames = FALSE,
         options = list(
-          dom = "rftp"
+          dom = "rftip"
         )
       )
     
