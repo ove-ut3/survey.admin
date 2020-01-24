@@ -159,24 +159,22 @@ mod_sms_sending_server <- function(input, output, session, rv){
   
   output$dt_phones <- DT::renderDT({
     
-    if (!is.null(input[["select_max_phone_per_token"]])) {
-      
-      dt_sms_list() %>% 
-        dplyr::group_by(token) %>% 
-        dplyr::filter(dplyr::row_number() <= as.integer(input[["select_max_phone_per_token"]])) %>% 
-        dplyr::ungroup() %>% 
-        dplyr::select(token, phone) %>% 
-        DT::datatable(
-          rownames = FALSE,
-          options = list(
-            dom = "rt",
-            scrollY = '70vh',
-            pageLength = -1
-          )
-        )
-      
-    }
+    req(input[["select_max_phone_per_token"]])
     
+    dt_sms_list() %>% 
+      dplyr::group_by(token) %>% 
+      dplyr::filter(dplyr::row_number() <= as.integer(input[["select_max_phone_per_token"]])) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::select(token, phone) %>% 
+      DT::datatable(
+        rownames = FALSE,
+        options = list(
+          dom = "rt",
+          scrollY = '70vh',
+          pageLength = -1
+        )
+      )
+
   })
   
   observeEvent(input$generate_short_link, {

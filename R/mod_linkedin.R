@@ -132,11 +132,9 @@ mod_linkedin_server <- function(input, output, session, rv){
   
   observeEvent(input$dt_participants_search, ignoreInit = TRUE, {
     
-    if (!is.null(input$dt_participants_rows_current)) {
+    req(input$dt_participants_rows_current)
       
-      DT::selectRows(proxy, input$dt_participants_rows_current[1])
-      
-    }
+    DT::selectRows(proxy, input$dt_participants_rows_current[1])
     
   })
   

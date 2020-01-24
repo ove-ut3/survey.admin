@@ -117,12 +117,10 @@ mod_participants_server <- function(input, output, session, rv){
   
   observeEvent(input$dt_participants_search, ignoreInit = TRUE, {
     
-    if (!is.null(input$dt_participants_rows_current)) {
-      
-      DT::selectRows(proxy, input$dt_participants_rows_current[1])
-      
-    }
+    req(input$dt_participants_rows_current)
     
+    DT::selectRows(proxy, input$dt_participants_rows_current[1])
+
   })
   
   rv$df_participants_contacts_filter <- reactive({
