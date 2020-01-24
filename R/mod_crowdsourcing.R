@@ -229,6 +229,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     rv$df_crowdsourcing_contributors %>% 
       dplyr::select(user, password, contributor_restriction) %>% 
+      dplyr::arrange(user) %>% 
       DT::datatable(
         rownames = FALSE,
         options = list(
