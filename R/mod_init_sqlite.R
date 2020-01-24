@@ -199,7 +199,7 @@ mod_init_sqlite_server <- function(input, output, session, rv){
     impexp::sqlite_export(
       sqlite_base, 
       dplyr::tibble(
-        key = c("dt_attributes", "search_text_input", "invitation_text", "survey_text")
+        key = c("dt_attributes", "search_text_input", "invitation_text_fr", "invitation_text_en", "survey_text_fr", "survey_text_en")
       ) %>% 
         dplyr::mutate(value = character(nrow(.))),
       "linkedin"

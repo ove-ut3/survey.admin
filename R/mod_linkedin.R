@@ -49,6 +49,12 @@ mod_linkedin_ui <- function(id){
           ),
           box(
           title = "Invitation text", width = 12,
+          selectInput(
+            ns("invitation_text_language"),
+            label = "Select language",
+            choices = c("fr", "en")
+          ),
+          br(),
           uiOutput(ns("ui_invitation_text")),
           uiOutput(ns("ui_clipbutton_invitation_text"))
           )
@@ -59,6 +65,12 @@ mod_linkedin_ui <- function(id){
         fluidRow(
           box(
             title = "Survey text", width = 12,
+            selectInput(
+              ns("survey_text_language"),
+              label = "Select language",
+              choices = c("fr", "en")
+            ),
+            br(),
             uiOutput(ns("ui_survey_text")),
             uiOutput(ns("ui_clipbutton_survey_text"))
           )
@@ -230,13 +242,16 @@ mod_linkedin_server <- function(input, output, session, rv){
   
   output$ui_invitation_text <- renderUI({
     
-    req(input$dt_participants_rows_selected)
+    req(
+      input$dt_participants_rows_selected,
+      input$invitation_text_language
+    )
     
     rv$linkedin_invitation_text <- impexp::sqlite_import(
       golem::get_golem_options("sqlite_base"),
       "linkedin"
     ) %>% 
-      dplyr::filter(key == "invitation_text") %>% 
+      dplyr::filter(key == glue::glue("invitation_text_{input$invitation_text_language}")) %>% 
       dplyr::pull(value) %>% 
       stringr::str_replace_all("''", "'")
 
@@ -312,14 +327,17 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{input$invitation_text}\" WHERE key = \"invitation_text\";")
+      glue::glue("UPDATE linkedin SET value = \"{input$invitation_text}\" WHERE key = \"invitation_text_{input$invitation_text_language}\";")
     )
 
   })
   
   observeEvent(input$import_invitation_text, {
     
-    req(input$import_invitation_text)
+    req(
+      input$import_invitation_text,
+      input$invitation_text_language
+    )
     
     invitation_text <- input$import_invitation_text$datapath %>% 
       readLines(encoding = "UTF-8") %>% 
@@ -335,7 +353,7 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{invitation_text}\" WHERE key = \"invitation_text\";")
+      glue::glue("UPDATE linkedin SET value = \"{invitation_text}\" WHERE key = \"invitation_text_{input$invitation_text_language}\";")
     )
     
   })
@@ -352,13 +370,16 @@ mod_linkedin_server <- function(input, output, session, rv){
   
   output$ui_survey_text <- renderUI({
     
-    req(input$dt_participants_rows_selected)
-    
+    req(
+      input$dt_participants_rows_selected,
+      input$survey_text_language
+    )
+     
     rv$linkedin_survey_text <- impexp::sqlite_import(
       golem::get_golem_options("sqlite_base"),
       "linkedin"
     ) %>% 
-      dplyr::filter(key == "survey_text") %>% 
+      dplyr::filter(key == glue::glue("survey_text_{input$survey_text_language}")) %>% 
       dplyr::pull(value) %>% 
       stringr::str_replace_all("''", "'")
     
@@ -368,7 +389,7 @@ mod_linkedin_server <- function(input, output, session, rv){
         textAreaInput(
           ns("survey_text"),
           label = NULL,
-          height = "150px",
+          height = "250px",
           value = isolate(rv$linkedin_survey_text),
           placeholder = "My survey text"
         ),
@@ -432,14 +453,17 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{input$survey_text}\" WHERE key = \"survey_text\";")
+      glue::glue("UPDATE linkedin SET value = \"{input$survey_text}\" WHERE key = \"survey_text_{input$survey_text_language}\";")
     )
     
   })
   
   observeEvent(input$import_survey_text, {
     
-    req(input$import_survey_text)
+    req(
+      input$import_survey_text,
+      input$survey_text_language
+    )
     
     survey_text <- input$import_survey_text$datapath %>% 
       readLines(encoding = "UTF-8") %>% 
@@ -455,7 +479,7 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{survey_text}\" WHERE key = \"survey_text\";")
+      glue::glue("UPDATE linkedin SET value = \"{survey_text}\" WHERE key = \"survey_text_{input$survey_text_language}\";")
     )
     
   })
