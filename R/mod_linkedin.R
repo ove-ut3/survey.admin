@@ -285,8 +285,6 @@ mod_linkedin_server <- function(input, output, session, rv){
       input$invitation_text
     )
     
-    #"Bonjour {firstname} {lastname},\nVous êtes {ifelse({Sexe} == 'Femme', 'diplômée', 'diplômé')} de L'UPS en 2017 en {Libellé diplôme}.\n{ifelse(is.na({Type diplôme précédent}),\"Qu'êtes-vous {ifelse({Sexe} == 'Femme', 'devenue', 'devenu')} ?\nVotre parcours nous intéresse !\",\"L'année dernière, nous vous avions {ifelse({Sexe} == 'Femme', 'interrogée', 'interrogé')} suite à votre {Type diplôme précédent}, votre situation a-t-elle changé ?\"}" %>%
-    
     df_linkedin_fiter <- dplyr::filter(rv$df_participants_filter(), dplyr::row_number() == input$dt_participants_rows_selected)
     
     clipButton_text <- input$invitation_text %>%
