@@ -91,6 +91,19 @@ mod_phoning_ui <- function(id){
         )
       ),
       box(
+        title = "Users hours",
+        width = 12,
+        div(
+          style = "display: inline-block; width: 50%; vertical-align: top;",
+          uiOutput(ns("ui_select_users_hours_date"))
+        ),
+        div(
+          style = "display: inline-block; width: 49%; vertical-align: top;",
+          uiOutput(ns("ui_select_user_hours"))
+        ),
+        DT::DTOutput(ns("dt_users_hours"))
+      ),
+      box(
         title = "Contacts updates log",
         width = 12,
         DT::DTOutput(ns("dt_contacts_update_log"))
@@ -557,6 +570,94 @@ mod_phoning_server <- function(input, output, session, rv){
         write.csv(con, na = "", row.names = FALSE)
     }
   )
+  
+  output$ui_select_users_hours_date <- renderUI({
+    
+    last_date <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "phoning_team_events"
+    ) %>% 
+      dplyr::arrange(date) %>% 
+      tail(1) %>% 
+      dplyr::pull(date)
+    
+    shinyWidgets::airDatepickerInput(
+      ns("users_hours_date"),
+      label = "Date",
+      value = last_date
+    )
+    
+  })
+  
+  output$ui_select_user_hours <- renderUI({
+    
+    users <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "phoning_team_events"
+    ) %>% 
+      dplyr::filter(user != "admin") %>% 
+      dplyr::pull(user) %>% 
+      unique() %>% sort()
+    
+    selectInput(
+      ns("select_user_hours"),
+      label = "User",
+      choices = users
+    )
+    
+  })
+  
+  output$dt_users_hours <- DT::renderDT({
+    
+    req(input$select_user_hours)
+    
+    phoning_team_events <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "phoning_team_events"
+    )
+    
+    library(lubridate)
+    
+    users_hours <- phoning_team_events %>% 
+      dplyr::bind_rows(
+        impexp::r_import(golem::get_golem_options("cron_responses")) %>% 
+          dplyr::filter(completed) %>% 
+          dplyr::inner_join(
+            phoning_team_events,
+            by = "token"
+          ) %>% 
+          dplyr::select(token, datetime = submitdate, user) %>% 
+          dplyr::mutate(
+            type = "validation_questionnaire",
+            date = substr(datetime, 1, 10)
+          )
+      ) %>% 
+      dplyr::arrange(date, user, datetime) %>% 
+      unique() %>% 
+      dplyr::filter(
+        user == input$select_user_hours,
+        date == substr(datetime, 1, 10),
+        lubridate::hour(lubridate::ymd_hms(datetime)) >= 17,
+        lubridate::hour(lubridate::ymd_hms(datetime)) <= 20,
+        date != "2020-01-22" # DUT TC
+      ) %>% 
+      dplyr::mutate(
+        diff = round((dplyr::lag(.$datetime) %--% .$datetime) / lubridate::dminutes(), .1),
+        diff = dplyr::if_else(type == "validation_questionnaire", NA_real_, diff)
+      ) %>% 
+      dplyr::group_by(user, date) %>%
+      dplyr::mutate(diff = ifelse(dplyr::row_number() == 1, NA_real_, diff)) %>%
+      dplyr::ungroup() %>% 
+      dplyr::select(date, user, datetime, type, diff)
+    
+    if (!is.null(input$users_hours_date)) {
+      users_hours <- dplyr::filter(users_hours, date == input$users_hours_date)
+    }
+    
+    users_hours %>% 
+      DT::datatable()
+    
+  })
   
   output$dt_contacts_update_log <- DT::renderDT({
     
