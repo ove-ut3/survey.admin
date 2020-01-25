@@ -91,9 +91,9 @@ mod_phoning_ui <- function(id){
         )
       ),
       box(
-        title = "Contributions moderation",
+        title = "Contacts updates log",
         width = 12,
-        DT::DTOutput(ns("dt_crowdsourcing_moderation"))
+        DT::DTOutput(ns("dt_contacts_update_log"))
       )
     )
   )
@@ -558,7 +558,7 @@ mod_phoning_server <- function(input, output, session, rv){
     }
   )
   
-  output$dt_crowdsourcing_moderation <- DT::renderDT({
+  output$dt_contacts_update_log <- DT::renderDT({
     
     impexp::sqlite_import(
       golem::get_golem_options("sqlite_base"),
