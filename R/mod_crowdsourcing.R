@@ -94,9 +94,9 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       ),
       fluidRow(
         box(
-          title = "Contributions moderation",
+          title = "Contributions logs",
           width = 12,
-          DT::DTOutput(ns("dt_crowdsourcing_moderation"))
+          DT::DTOutput(ns("dt_crowdsourcing_log"))
         )
       )
     )
@@ -498,13 +498,12 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
   })
   
-  output$dt_crowdsourcing_moderation <- DT::renderDT({
+  output$dt_crowdsourcing_log <- DT::renderDT({
     
     impexp::sqlite_import(
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_log"
     ) %>% 
-      dplyr::filter(is.na(status)) %>% 
       DT::datatable()
     
   })
