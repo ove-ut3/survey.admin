@@ -504,7 +504,9 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_log"
     ) %>% 
-      DT::datatable()
+      DT::datatable(
+        rownames = FALSE
+      )
     
   })
 }

@@ -655,7 +655,9 @@ mod_phoning_server <- function(input, output, session, rv){
     }
     
     users_hours %>% 
-      DT::datatable()
+      DT::datatable(
+        rownames = FALSE
+      )
     
   })
   
@@ -666,7 +668,9 @@ mod_phoning_server <- function(input, output, session, rv){
       "phoning_crowdsourcing_log"
     ) %>% 
       dplyr::filter(is.na(status)) %>% 
-      DT::datatable()
+      DT::datatable(
+        rownames = FALSE
+      )
     
   })
   
