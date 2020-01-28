@@ -198,6 +198,10 @@ mod_participants_server <- function(input, output, session, rv){
     req(input[["dt_participants_rows_selected"]])
     
     impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_events") %>% 
+      dplyr::bind_rows(
+        impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events") %>% 
+          dplyr::select(token, type, comment, date)
+      ) %>% 
       dplyr::semi_join(
         rv$df_participants_contacts_filter(),
         by = "token"
