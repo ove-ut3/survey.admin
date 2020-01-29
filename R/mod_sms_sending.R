@@ -273,9 +273,18 @@ mod_sms_sending_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE sms_template SET value = \"{input$sender}\" WHERE key = \"sender\";")
+      glue::glue("DELETE FROM sms_template WHERE key = \"sender\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender",
+        value = input$sender
+      ),
+      "sms_template"
+    )
+
   })
   
   output$input_textarea_body <- renderUI({
@@ -303,10 +312,19 @@ mod_sms_sending_server <- function(input, output, session, rv){
     req(input$body != rv$sms_body)
     
     rv$sms_body <- input$body
-    
+
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE sms_template SET value = \"{input$body}\" WHERE key = \"body\";")
+      glue::glue("DELETE FROM sms_template WHERE key = \"body\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "body",
+        value = input$body
+      ),
+      "sms_template"
     )
     
   })
@@ -327,7 +345,16 @@ mod_sms_sending_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE sms_template SET value = \"{sms_template$sender}\" WHERE key = \"sender\";")
+      glue::glue("DELETE FROM sms_template WHERE key = \"sender\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender",
+        value = input$sender
+      ),
+      "sms_template"
     )
     
     # body
@@ -339,7 +366,16 @@ mod_sms_sending_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE sms_template SET value = \"{sms_template$body}\" WHERE key = \"body\";")
+      glue::glue("DELETE FROM sms_template WHERE key = \"body\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "body",
+        value = input$body
+      ),
+      "sms_template"
     )
     
   })
