@@ -129,34 +129,15 @@ mod_phoning_server <- function(input, output, session, rv){
       tidyr::separate_rows(value, sep = ";") %>% 
       dplyr::pull(value)
     
-    to_contact <- survey.phoning::df_groups(
-      rv$df_participants_filter() %>% 
-        dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups),
-      attributes_groups = attributes_groups,
-      user = "admin"
-    ) %>% 
+    remaining <- rv$df_participants_filter() %>% 
+      dplyr::filter(!completed, !optout) %>% 
+      dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
       tidyr::drop_na(user) %>% 
-      dplyr::group_by(user) %>% 
-      dplyr::summarise_at("to_contact", sum, na.rm = TRUE) %>% 
-      dplyr::ungroup()
-    
-    events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events") %>%
-      dplyr::select(user, token) %>% 
-      unique() %>% 
       dplyr::anti_join(
-        rv$df_participants_filter() %>% 
-          dplyr::filter(!completed, !optout),
+        impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events"),
         by = "token"
       ) %>% 
-      dplyr::count(user, name = "events")
-    
-    remaining <- to_contact %>% 
-      dplyr::left_join(
-        events,
-        by = "user"
-      ) %>% 
-      dplyr::mutate(remaining_calls = to_contact - events) %>% 
-      dplyr::select(user, remaining_calls)
+      dplyr::count(user, name = "remaining_calls")
     
     rv$df_phoning_team %>% 
       dplyr::left_join(remaining, by = "user") %>% 
