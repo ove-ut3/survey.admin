@@ -179,9 +179,18 @@ mod_mailing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{input$sender_email}\" WHERE key = \"sender_email\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"sender_email\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_email",
+        value = input$sender_email
+      ),
+      "mail_template"
+    )
+
   })
   
   output$input_text_sender_alias <- renderUI({
@@ -210,9 +219,18 @@ mod_mailing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{input$sender_alias}\" WHERE key = \"sender_alias\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"sender_alias\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_alias",
+        value = input$sender_alias
+      ),
+      "mail_template"
+    )
+
   })
   
   output$input_text_mail_subject <- renderUI({
@@ -222,8 +240,7 @@ mod_mailing_server <- function(input, output, session, rv){
       "mail_template"
     ) %>% 
       dplyr::filter(key == "subject") %>% 
-      dplyr::pull(value) %>% 
-      stringr::str_replace_all("''", "'")
+      dplyr::pull(value)
     
     textInput(
       ns("mail_subject"),
@@ -242,9 +259,18 @@ mod_mailing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{input$mail_subject}\" WHERE key = \"subject\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"subject\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "subject",
+        value = input$mail_subject
+      ),
+      "mail_template"
+    )
+
   })
   
   output$input_textarea_mail_body <- renderUI({
@@ -254,8 +280,7 @@ mod_mailing_server <- function(input, output, session, rv){
       "mail_template"
     ) %>% 
       dplyr::filter(key == "body") %>% 
-      dplyr::pull(value) %>% 
-      stringr::str_replace_all("''", "'")
+      dplyr::pull(value)
     
     textAreaInput(
       ns("mail_body"),
@@ -275,17 +300,25 @@ mod_mailing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{input$mail_body}\" WHERE key = \"body\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"body\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "body",
+        value = input$mail_body
+      ),
+      "mail_template"
+    )
+
   })
   
   observeEvent(input$import_mail, {
     
     req(input$import_mail)
 
-    mail_template <- jsonlite::fromJSON(input$import_mail$datapath) %>% 
-      purrr::map(stringr::str_replace_all, '"', '""')
+    mail_template <- jsonlite::fromJSON(input$import_mail$datapath)
 
     # sender email
     updateTextInput(
@@ -296,9 +329,18 @@ mod_mailing_server <- function(input, output, session, rv){
 
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{mail_template$sender_email}\" WHERE key = \"sender_email\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"sender_email\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_email",
+        value = input$sender_email
+      ),
+      "mail_template"
+    )
+
     # sender alias
     updateTextInput(
       session,
@@ -308,7 +350,16 @@ mod_mailing_server <- function(input, output, session, rv){
 
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{mail_template$sender_alias}\" WHERE key = \"sender_alias\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"sender_alias\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_alias",
+        value = input$sender_alias
+      ),
+      "mail_template"
     )
 
     # mail subject
@@ -320,7 +371,16 @@ mod_mailing_server <- function(input, output, session, rv){
 
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{mail_template$subject}\" WHERE key = \"subject\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"subject\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "subject",
+        value = input$mail_subject
+      ),
+      "mail_template"
     )
 
     # mail body
@@ -332,7 +392,16 @@ mod_mailing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE mail_template SET value = \"{mail_template$body}\" WHERE key = \"body\";")
+      glue::glue("DELETE FROM mail_template WHERE key = \"body\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "body",
+        value = input$mail_body
+      ),
+      "mail_template"
     )
 
   })
