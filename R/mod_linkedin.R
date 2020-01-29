@@ -252,8 +252,7 @@ mod_linkedin_server <- function(input, output, session, rv){
       "linkedin"
     ) %>% 
       dplyr::filter(key == glue::glue("invitation_text_{input$invitation_text_language}")) %>% 
-      dplyr::pull(value) %>% 
-      stringr::str_replace_all("''", "'")
+      dplyr::pull(value)
 
     tagList(
       column(
@@ -292,22 +291,11 @@ mod_linkedin_server <- function(input, output, session, rv){
         rv$df_participants_attributes %>% 
           tidyr::separate_rows(survey_id, sep = ";") %>% 
           dplyr::filter(survey_id == df_linkedin_fiter$survey_id)
-      )
-    
-    try <- tryCatch(
-      glue::glue_data(
-        clipButton_text,
-        .x = df_linkedin_fiter
-      ),
-      error = function(e) e
-    )
-    
-    if ("error" %in% class(try)) {
-      clipButton_text <- NULL
-    } else {
-      clipButton_text <- iconv(try, from = "UTF-8")
-    }
-    
+      ) %>% 
+      glue::glue_data(.x = df_linkedin_fiter) %>% 
+      glue::glue_data(.x = df_linkedin_fiter) %>% 
+      iconv(from = "UTF-8")
+
     tagList(
       column(
         width = 2,
@@ -325,9 +313,18 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{input$invitation_text}\" WHERE key = \"invitation_text_{input$invitation_text_language}\";")
+      glue::glue("DELETE FROM linkedin WHERE key = \"invitation_text_{input$invitation_text_language}\";")
     )
-
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = glue::glue("invitation_text_{input$invitation_text_language}"),
+        value = input$invitation_text
+      ),
+      "linkedin"
+    )
+    
   })
   
   observeEvent(input$import_invitation_text, {
@@ -351,7 +348,16 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{invitation_text}\" WHERE key = \"invitation_text_{input$invitation_text_language}\";")
+      glue::glue("DELETE FROM linkedin WHERE key = \"invitation_text_{input$invitation_text_language}\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = glue::glue("invitation_text_{input$invitation_text_language}"),
+        value = invitation_text
+      ),
+      "linkedin"
     )
     
   })
@@ -372,14 +378,13 @@ mod_linkedin_server <- function(input, output, session, rv){
       input$dt_participants_rows_selected,
       input$survey_text_language
     )
-     
+    
     rv$linkedin_survey_text <- impexp::sqlite_import(
       golem::get_golem_options("sqlite_base"),
       "linkedin"
     ) %>% 
       dplyr::filter(key == glue::glue("survey_text_{input$survey_text_language}")) %>% 
-      dplyr::pull(value) %>% 
-      stringr::str_replace_all("''", "'")
+      dplyr::pull(value)
     
     tagList(
       column(
@@ -451,9 +456,18 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{input$survey_text}\" WHERE key = \"survey_text_{input$survey_text_language}\";")
+      glue::glue("DELETE FROM linkedin WHERE key = \"survey_text_{input$survey_text_language}\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = glue::glue("survey_text_{input$survey_text_language}"),
+        value = input$survey_text
+      ),
+      "linkedin"
+    )
+
   })
   
   observeEvent(input$import_survey_text, {
@@ -477,7 +491,16 @@ mod_linkedin_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE linkedin SET value = \"{survey_text}\" WHERE key = \"survey_text_{input$survey_text_language}\";")
+      glue::glue("DELETE FROM linkedin WHERE key = \"survey_text_{input$survey_text_language}\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = glue::glue("survey_text_{input$survey_text_language}"),
+        value = survey_text
+      ),
+      "linkedin"
     )
     
   })
