@@ -262,10 +262,19 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     req(input$sender_email != rv$crowdsourcing_sender_email)
     
     rv$crowdsourcing_sender_email <- input$sender_email
-    
+
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$sender_email}\" WHERE key = \"sender_email\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"sender_email\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_email",
+        value = input$sender_email
+      ),
+      "crowdsourcing_mail_template"
     )
     
   })
@@ -296,7 +305,16 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$sender_alias}\" WHERE key = \"sender_alias\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"sender_alias\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_alias",
+        value = input$sender_alias
+      ),
+      "crowdsourcing_mail_template"
     )
     
   })
@@ -328,9 +346,18 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$mail_subject}\" WHERE key = \"subject\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"subject\";")
     )
     
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "subject",
+        value = input$mail_subject
+      ),
+      "crowdsourcing_mail_template"
+    )
+
   })
   
   output$input_textarea_mail_body <- renderUI({
@@ -358,10 +385,19 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     req(input$mail_body != rv$crowdsourcing_mail_body)
     
     rv$crowdsourcing_mail_body <- input$mail_body
-    
+
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{input$mail_body}\" WHERE key = \"body\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"body\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "body",
+        value = input$mail_body
+      ),
+      "crowdsourcing_mail_template"
     )
     
   })
@@ -382,7 +418,16 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$sender_email}\" WHERE key = \"sender_email\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"sender_email\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_email",
+        value = input$sender_email
+      ),
+      "crowdsourcing_mail_template"
     )
     
     # sender alias
@@ -394,7 +439,16 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$sender_alias}\" WHERE key = \"sender_alias\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"sender_alias\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "sender_alias",
+        value = input$sender_alias
+      ),
+      "crowdsourcing_mail_template"
     )
     
     # mail subject
@@ -406,7 +460,16 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$subject}\" WHERE key = \"subject\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"subject\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "subject",
+        value = input$mail_subject
+      ),
+      "crowdsourcing_mail_template"
     )
     
     # mail body
@@ -418,7 +481,16 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("UPDATE crowdsourcing_mail_template SET value = \"{mail_template$body}\" WHERE key = \"body\";")
+      glue::glue("DELETE FROM crowdsourcing_mail_template WHERE key = \"body\";")
+    )
+    
+    impexp::sqlite_append_rows(
+      golem::get_golem_options("sqlite_base"),
+      dplyr::tibble(
+        key = "body",
+        value = input$mail_body
+      ),
+      "crowdsourcing_mail_template"
     )
     
   })
