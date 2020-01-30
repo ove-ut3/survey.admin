@@ -423,22 +423,11 @@ mod_linkedin_server <- function(input, output, session, rv){
         rv$df_participants_attributes %>% 
           tidyr::separate_rows(survey_id, sep = ";") %>% 
           dplyr::filter(survey_id == df_linkedin_fiter$survey_id)
-      )
+      ) %>% 
+      glue::glue_data(.x = df_linkedin_fiter) %>% 
+      glue::glue_data(.x = df_linkedin_fiter) %>% 
+      iconv(from = "UTF-8")
 
-    try <- tryCatch(
-      glue::glue_data(
-        clipButton_text,
-        .x = df_linkedin_fiter
-      ),
-      error = function(e) e
-    )
-
-    if ("error" %in% class(try)) {
-      clipButton_text <- NULL
-    } else {
-      clipButton_text <- iconv(try, from = "UTF-8")
-    }
-    
     tagList(
       column(
         width = 2,
