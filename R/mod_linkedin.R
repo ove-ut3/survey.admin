@@ -121,9 +121,8 @@ mod_linkedin_server <- function(input, output, session, rv){
         selection = list(mode = 'single', selected = 1),
         rownames = FALSE,
         options = list(
-          pageLength = -1,
-          dom = 'rft',
-          scrollY = '40vh'
+          dom = 'rftp',
+          scrollY = '20vh'
         )
       )
     
