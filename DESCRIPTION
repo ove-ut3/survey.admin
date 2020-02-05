@@ -29,5 +29,5 @@ Suggests:
 Remotes:
     JohnCoene/tippy,
     stephLH/limer@next,
-    daattali/shinyalert,
-    stephLH/rhandsontable@afterRowMove
+    jrowen/rhandsontable,
+    daattali/shinyalert
