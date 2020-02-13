@@ -154,19 +154,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
   body <- glue::glue("<p style={style}>{body}</p>") %>% 
     stringr::str_replace_all("\n", "<br>")
   
-  attribute_sender <- from$sender_alias %>% 
-    stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
-    .[[1]] %>% 
-    .[, 2] %>% 
-    unique()
-  
-  if (attribute_sender %in% names(selected_emails)) {
-    
-    selected_emails <- selected_emails %>% 
-      split(f = .[[attribute_sender]])
-  }
-  
-  rename <- paste(subject, body) %>% 
+  rename <- paste(from$alias, subject, body) %>% 
     stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
     .[[1]] %>% 
     .[, 2] %>% 
@@ -204,14 +192,45 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
     survey.admin::escape_space_glue(participants_attributes) %>% 
     glue::glue_data(.x = glue_data)
   
+  attribute_sender <- from$alias %>% 
+    stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
+    .[[1]] %>% 
+    .[, 2] %>% 
+    unique()
+  
+  if (any(attribute_sender %in% names(participants))) {
+    
+    attribute_sender <- rename %>% 
+      dplyr::filter(column == !!attribute_sender) %>% 
+      dplyr::pull(rename) %>% 
+      tolower()
+    
+    to <- to %>% 
+      split(f = .[[attribute_sender]])
+    
+  } else {
+    
+    to <- list(to)
+    names(to) <- from$alias
+    
+  }
+  
   key <- limer::get_session_key()
   
-  survey_id_tid <- limer::mailing_create_survey(
-    from = from,
-    to = to,
-    subject = subject,
-    body = body
+  survey_id_tid <- purrr::map2_df(
+    to,
+    names(to),
+     ~ limer::mailing_create_survey(
+         from = list(
+           "email" = from$email,
+           "alias" = .y
+          ),
+         to = .x,
+         subject = subject,
+         body = body
+       )
   )
+  
   survey_id <- survey_id_tid$survey_id
   tid <- survey_id_tid$tid
   
@@ -228,19 +247,19 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
         if (i != 1) Sys.sleep(sleep)
         
         try <- tryCatch(
-          limer::mail_registered_participant(survey_id, tid = tid[i]),
+          limer::mail_registered_participant(survey_id[i], tid = tid[i]),
           error = function(e) e
         )
         
         if ("error" %in% class(try)) {
           
           key <- limer::get_session_key()
-          mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
+          mailing <- limer::mail_registered_participant(survey_id[i], tid = tid[i])
           
         } else if (!stringr::str_detect(try$status, "\\d+ left to send$")) {
           
           key <- limer::get_session_key()
-          mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
+          mailing <- limer::mail_registered_participant(survey_id[i], tid = tid[i])
           
         }
         
