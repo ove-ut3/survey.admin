@@ -707,9 +707,12 @@ pours_etud_perte_reprise <- function(sqlite_base) {
     unique()
   
   maj_pours_etud <- dplyr::bind_rows(incomplete_responses, complete_responses) %>% 
-    dplyr::select(survey_id, token, dplyr::matches("^poursEtud\\.n\\d?N\\d"), dplyr::matches("^poursEtud.+Intitule?$"), situationProN2) %>% 
+    dplyr::select(survey_id, token, dplyr::matches("^poursEtud\\.n\\d?N\\d"), dplyr::matches("^poursEtud.+Form$"), dplyr::matches("^poursEtud.+Intitule?$"), situationProN2, fcStatut) %>% 
     tidyr::gather("key", "value", dplyr::matches("^poursEtud\\.n\\d?N\\d")) %>% 
-    dplyr::filter(is.na(value)) %>% 
+    dplyr::filter(
+      is.na(fcStatut),
+      is.na(value)
+    ) %>% 
     dplyr::mutate(
       title = stringr::str_match(key, "^(.+?)\\.")[, 2],
       title_sq = stringr::str_match(key, "^(.+?)\\.(.+)")[, 3]
@@ -719,12 +722,21 @@ pours_etud_perte_reprise <- function(sqlite_base) {
     dplyr::mutate(
       value = dplyr::case_when(
         stringr::str_detect(token, "^[LM]") & !is.na(situationProN2) ~ "A3",
-        stringr::str_detect(token, "^I") & title_sq == "nN1" & !is.na(poursEtudNN1Intitule) ~ "A1",
-        stringr::str_detect(token, "^I") & title_sq == "nN1" & is.na(poursEtudNN1Intitule) ~ "A2",
-        stringr::str_detect(token, "^I") & title_sq == "n1N2" & !is.na(poursEtudN1N2Intitul) ~ "A1",
-        stringr::str_detect(token, "^I") & title_sq == "n1N2" & is.na(poursEtudN1N2Intitul) ~ "A2",
-        stringr::str_detect(token, "^I") & title_sq == "n2N3" & !is.na(poursEtudN2N3Intitul) ~ "A1",
-        stringr::str_detect(token, "^I") & title_sq == "n2N3" & is.na(poursEtudN2N3Intitul) ~ "A2"
+        stringr::str_detect(token, "^[LM]") & title_sq == "nN1" & is.na(poursEtudNN1Form) & !is.na(poursEtudNN1Intitule) ~ "A1",
+        stringr::str_detect(token, "^[LM]") & title_sq == "nN1" & !is.na(poursEtudNN1Form) ~ "A2",
+        stringr::str_detect(token, "^[LM]") & title_sq == "nN1" & is.na(poursEtudNN1Form) & is.na(poursEtudNN1Intitule) ~ "A3",
+        stringr::str_detect(token, "^[LM]") & title_sq == "n1N2" & is.na(poursEtudN1N2Form) & !is.na(poursEtudN1N2Intitul) ~ "A1",
+        stringr::str_detect(token, "^[LM]") & title_sq == "n1N2" & !is.na(poursEtudN1N2Form) ~ "A2",
+        stringr::str_detect(token, "^[LM]") & title_sq == "n1N2" & is.na(poursEtudN1N2Form) & is.na(poursEtudN1N2Intitul) ~ "A3",
+        stringr::str_detect(token, "^[LM]") & title_sq == "n2N3" & is.na(poursEtudN2N3Form) & !is.na(poursEtudN2N3Intitul) ~ "A1",
+        stringr::str_detect(token, "^[LM]") & title_sq == "n2N3" & !is.na(poursEtudN2N3Form) ~ "A2",
+        stringr::str_detect(token, "^[LM]") & title_sq == "n2N3" & is.na(poursEtudN2N3Form) & is.na(poursEtudN2N3Intitul) ~ "A3",
+        stringr::str_detect(token, "^I") & title_sq == "nN1" & !is.na(poursEtudNN1Form) ~ "A1",
+        stringr::str_detect(token, "^I") & title_sq == "nN1" & is.na(poursEtudNN1Form) ~ "A2",
+        stringr::str_detect(token, "^I") & title_sq == "n1N2" & !is.na(poursEtudN1N2Form) ~ "A1",
+        stringr::str_detect(token, "^I") & title_sq == "n1N2" & is.na(poursEtudN1N2Form) ~ "A2",
+        stringr::str_detect(token, "^I") & title_sq == "n2N3" & !is.na(poursEtudN2N3Form) ~ "A1",
+        stringr::str_detect(token, "^I") & title_sq == "n2N3" & is.na(poursEtudN2N3Form) ~ "A2"
       )
     ) %>% 
     tidyr::drop_na(value)
@@ -732,6 +744,35 @@ pours_etud_perte_reprise <- function(sqlite_base) {
   if (nrow(maj_pours_etud) >= 1) {
     
     update <- maj_pours_etud %>% 
+      split(1:nrow(.)) %>% 
+      pbapply::pblapply(function(update_token) {
+        
+        limer::update_responses(
+          survey_id = update_token$survey_id,
+          token = update_token$token,
+          question = update_token$key,
+          value = update_token$value
+        )
+        
+      })
+    
+  }
+  
+  maj_etud_act <- dplyr::bind_rows(incomplete_responses, complete_responses) %>% 
+    tidyr::drop_na(poursEtudN2N3Form) %>% 
+    dplyr::select(survey_id, token, poursEtudN2N3ActPrin) %>% 
+    tidyr::gather("title", "value", poursEtudN2N3ActPrin) %>% 
+    dplyr::filter(is.na(value)) %>% 
+    dplyr::left_join(questions, by = c("survey_id", "title")) %>% 
+    dplyr::mutate(key = glue::glue("{survey_id}X{group_id}X{question_id}")) %>% 
+    dplyr::mutate(
+      value = "Y"
+    ) %>% 
+    tidyr::drop_na(value)
+  
+  if (nrow(maj_etud_act) >= 1) {
+    
+    update <- maj_etud_act %>% 
       split(1:nrow(.)) %>% 
       pbapply::pblapply(function(update_token) {
         
