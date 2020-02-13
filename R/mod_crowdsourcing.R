@@ -564,7 +564,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       subject = input$mail_subject,
       body = input$mail_body,
       sleep = input$mailing_sleep,
-      general = TRUE,
+      progress = TRUE,
       crowdsourcing = TRUE
     )
     

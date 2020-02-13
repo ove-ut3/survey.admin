@@ -110,6 +110,8 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
 escape_space_glue <- function(string, participants_attributes) {
   
   attributes_replace <- participants_attributes %>% 
+    dplyr::select(description) %>% 
+    unique() %>% 
     dplyr::filter(stringr::str_detect(description, " ")) %>% 
     dplyr::mutate(replace = paste0("`", description, "`")) %>% 
     split(x = .$replace, f = .$description) %>% 
@@ -141,93 +143,55 @@ escape_space_glue <- function(string, participants_attributes) {
 #' @param body \dots
 #' @param sleep \dots
 #' @param delete_survey \dots
-#' @param general \dots
+#' @param progress \dots
 #' @param crowdsourcing \dots
 #' 
 #' @export
 #' @keywords internal
-mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, general = FALSE, crowdsourcing = FALSE) {
+mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, progress = FALSE, crowdsourcing = FALSE) {
   
   style <- "'font-family: calibri; font-size: 11pt;'"
   body <- glue::glue("<p style={style}>{body}</p>") %>% 
     stringr::str_replace_all("\n", "<br>")
   
-  if (is.null(participants_attributes)) {
-    
-    to <- participants
-    
-  } else {
-    
-    attributes_body <- paste(subject, body) %>% 
-      stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
-      .[[1]] %>% 
-      .[, 2] %>% 
-      unique() %>% 
-      dplyr::tibble(
-        attribute_body = .
-      ) %>% 
-      dplyr::semi_join(
-        participants_attributes,
-        by = c("attribute_body" = "description")
-      )
-    
-    extra_attributes <- dplyr::tibble(
-      attribute = c("TOKEN", "FIRSTNAME", "LASTNAME", paste0("ATTRIBUTE_", c(nrow(participants_attributes), nrow(participants_attributes) + 1))),
-      description = c("token", "firstname", "lastname", "surveyurl", "optouturl"),
-      attribute_body = c("TOKEN", "FIRSTNAME", "LASTNAME", "SURVEYURL", "OPTOUTURL")
-    )
-    
-    rename <- dplyr::bind_rows(
-      attributes_body %>% 
-        dplyr::semi_join(
-          participants_attributes,
-          by = c("attribute_body" = "attribute")
-        ) %>% 
-        dplyr::left_join(
-          participants_attributes,
-          by = c("attribute_body" = "attribute")
-        ) %>% 
-        dplyr::mutate(attribute = attribute_body) %>% 
-        dplyr::select(attribute, description, attribute_body),
-      attributes_body %>% 
-        dplyr::semi_join(
-          participants_attributes,
-          by = c("attribute_body" = "description")
-        ) %>% 
-        dplyr::left_join(
-          participants_attributes,
-          by = c("attribute_body" = "description")
-        ) %>% 
-        dplyr::mutate(description = attribute_body) %>% 
-        dplyr::select(attribute, description, attribute_body),
-      attributes_body %>% 
-        dplyr::semi_join(extra_attributes, "attribute_body") %>% 
-        dplyr::left_join(extra_attributes, "attribute_body"),
-      attributes_body %>% 
-        dplyr::semi_join(extra_attributes, by = c("attribute_body" = "description")) %>% 
-        dplyr::left_join(extra_attributes %>% 
-                           dplyr::select(-attribute_body),
-                         by = c("attribute_body" = "description")) %>% 
-        dplyr::mutate(description = attribute_body)
+  rename <- paste(subject, body) %>% 
+    stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
+    .[[1]] %>% 
+    .[, 2] %>% 
+    unique() %>% 
+    dplyr::tibble(
+      attribute_body = .
     ) %>% 
-      dplyr::mutate_at("description", patchr::str_normalise_colnames) %>% 
-      dplyr::rename(column = description, rename = attribute) %>% 
-      dplyr::add_row(column = "email")
-    
-    to <- patchr::rename(participants, rename) %>% 
-      patchr::normalise_colnames()
-    
-    glue_data <- rename %>% 
-      dplyr::filter(attribute_body != rename) %>% 
-      dplyr::select(-attribute_body) %>% 
-      dplyr::mutate_at("rename", ~ paste0("{", .,"}")) %>% 
-      tidyr::spread(column, rename)
-    
-    subject <- glue::glue_data(subject, .x = glue_data)
-    body <- glue::glue_data(body, .x = glue_data)
-    
-  }
+    dplyr::semi_join(
+      dplyr::tibble(attribute_body = names(participants)),
+      by = "attribute_body"
+    ) %>% 
+    dplyr::mutate(
+      column = patchr::str_normalise_colnames(attribute_body),
+      attribute = glue::glue("ATTRIBUTE_{dplyr::row_number()}") %>% 
+        as.character(),
+      attribute = dplyr::if_else(attribute_body %in% c("firstname", "lastname"), toupper(attribute_body), attribute)
+    ) %>% 
+    dplyr::add_row(column = "email") %>% 
+    dplyr::rename(rename = attribute)
   
+  to <- patchr::rename(participants, rename) %>% 
+    patchr::normalise_colnames()
+  
+  glue_data <- rename %>% 
+    dplyr::filter(column != rename) %>% 
+    dplyr::select(-column) %>% 
+    dplyr::mutate_at("rename", ~ paste0("{", .,"}")) %>% 
+    tidyr::spread(attribute_body, rename)
+  
+  subject <- subject %>% 
+    survey.admin::escape_space_glue(participants_attributes) %>% 
+    glue::glue_data(.x = glue_data)
+  
+  body <- body %>% 
+    survey.admin::escape_space_glue(participants_attributes) %>% 
+    glue::glue_data(.x = glue_data)
+
   key <- limer::get_session_key()
 
   survey_id_tid <- limer::mailing_create_survey(
@@ -239,11 +203,11 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
   survey_id <- survey_id_tid$survey_id
   tid <- survey_id_tid$tid
 
-  if (general == FALSE) {
+  if (progress == FALSE) {
 
     limer::mail_registered_participant(survey_id, tid = tid)
 
-  } else if (general == TRUE) {
+  } else if (progress == TRUE) {
 
     withProgress(message = "Sending email :", value = 0, detail = "0%", {
 
