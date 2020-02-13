@@ -154,18 +154,13 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
   body <- glue::glue("<p style={style}>{body}</p>") %>% 
     stringr::str_replace_all("\n", "<br>")
   
-<<<<<<< HEAD
   rename <- paste(from$alias, subject, body) %>% 
-=======
-  rename <- paste(subject, body) %>% 
->>>>>>> 4bfb2061f2d12db52770a30bf69cd968cf1f261c
     stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
     .[[1]] %>% 
     .[, 2] %>% 
     unique() %>% 
     dplyr::tibble(
       attribute_body = .
-<<<<<<< HEAD
     ) %>% 
     dplyr::semi_join(
       dplyr::tibble(attribute_body = names(participants)),
@@ -177,19 +172,6 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
         as.character(),
       attribute = dplyr::if_else(attribute_body %in% c("firstname", "lastname"), toupper(attribute_body), attribute)
     ) %>% 
-=======
-    ) %>% 
-    dplyr::semi_join(
-      dplyr::tibble(attribute_body = names(participants)),
-      by = "attribute_body"
-    ) %>% 
-    dplyr::mutate(
-      column = patchr::str_normalise_colnames(attribute_body),
-      attribute = glue::glue("ATTRIBUTE_{dplyr::row_number()}") %>% 
-        as.character(),
-      attribute = dplyr::if_else(attribute_body %in% c("firstname", "lastname"), toupper(attribute_body), attribute)
-    ) %>% 
->>>>>>> 4bfb2061f2d12db52770a30bf69cd968cf1f261c
     dplyr::add_row(column = "email") %>% 
     dplyr::rename(rename = attribute)
   
@@ -201,8 +183,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
     dplyr::select(-column) %>% 
     dplyr::mutate_at("rename", ~ paste0("{", .,"}")) %>% 
     tidyr::spread(attribute_body, rename)
-<<<<<<< HEAD
-  
+
   subject <- subject %>% 
     survey.admin::escape_space_glue(participants_attributes) %>% 
     glue::glue_data(.x = glue_data)
@@ -233,16 +214,6 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
     names(to) <- from$alias
     
   }
-=======
->>>>>>> 4bfb2061f2d12db52770a30bf69cd968cf1f261c
-  
-  subject <- subject %>% 
-    survey.admin::escape_space_glue(participants_attributes) %>% 
-    glue::glue_data(.x = glue_data)
-  
-  body <- body %>% 
-    survey.admin::escape_space_glue(participants_attributes) %>% 
-    glue::glue_data(.x = glue_data)
 
   key <- limer::get_session_key()
   
@@ -262,23 +233,13 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
   
   survey_id <- survey_id_tid$survey_id
   tid <- survey_id_tid$tid
-<<<<<<< HEAD
-  
+
   if (progress == FALSE) {
     
     limer::mail_registered_participant(survey_id, tid = tid)
     
   } else if (progress == TRUE) {
-    
-=======
 
-  if (progress == FALSE) {
-
-    limer::mail_registered_participant(survey_id, tid = tid)
-
-  } else if (progress == TRUE) {
-
->>>>>>> 4bfb2061f2d12db52770a30bf69cd968cf1f261c
     withProgress(message = "Sending email :", value = 0, detail = "0%", {
       
       for (i in 1:length(tid)) {
