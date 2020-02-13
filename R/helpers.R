@@ -14,7 +14,7 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
       patchr::normalise_colnames() %>% 
       dplyr::arrange(token) %>% 
       dplyr::select(survey_id, token)
-
+    
     config_limesurvey <- impexp::sqlite_import(
       sqlite_base,
       "config"
@@ -43,11 +43,11 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
       dplyr::mutate(optout = TRUE)
     
     questions <- purrr::map_df(
-        survey_id,
-        ~ limer::call_limer("list_questions", list("iSurveyID" = .)) %>% 
-          dplyr::filter(parent_qid == "0", type != "*") %>% 
-          dplyr::select(survey_id = sid, group_id = gid, title, question_order)
-      ) %>% 
+      survey_id,
+      ~ limer::call_limer("list_questions", list("iSurveyID" = .)) %>% 
+        dplyr::filter(parent_qid == "0", type != "*") %>% 
+        dplyr::select(survey_id = sid, group_id = gid, title, question_order)
+    ) %>% 
       dplyr::left_join(
         purrr::map_df(
           survey_id,
@@ -85,7 +85,7 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
       dplyr::mutate(max_page = purrr::map2_int(lastpage, group_order, ~ max(.x, .y))) %>% 
       dplyr::mutate(lastpage_rate = max_page / groups_number) %>%
       dplyr::select(survey_id, token, datestamp, lastpage, group_order, lastpage_rate)
-
+    
     release <- limer::release_session_key()
     
     cron_responses <- participants %>%
@@ -110,6 +110,8 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
 escape_space_glue <- function(string, participants_attributes) {
   
   attributes_replace <- participants_attributes %>% 
+    dplyr::select(description) %>% 
+    unique() %>% 
     dplyr::filter(stringr::str_detect(description, " ")) %>% 
     dplyr::mutate(replace = paste0("`", description, "`")) %>% 
     split(x = .$replace, f = .$description) %>% 
@@ -141,95 +143,69 @@ escape_space_glue <- function(string, participants_attributes) {
 #' @param body \dots
 #' @param sleep \dots
 #' @param delete_survey \dots
-#' @param general \dots
+#' @param progress \dots
 #' @param crowdsourcing \dots
 #' 
 #' @export
 #' @keywords internal
-mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, general = FALSE, crowdsourcing = FALSE) {
+mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, progress = FALSE, crowdsourcing = FALSE) {
   
   style <- "'font-family: calibri; font-size: 11pt;'"
   body <- glue::glue("<p style={style}>{body}</p>") %>% 
     stringr::str_replace_all("\n", "<br>")
   
-  if (is.null(participants_attributes)) {
+  attribute_sender <- from$sender_alias %>% 
+    stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
+    .[[1]] %>% 
+    .[, 2] %>% 
+    unique()
+  
+  if (attribute_sender %in% names(selected_emails)) {
     
-    to <- participants
-    
-  } else {
-    
-    attributes_body <- paste(subject, body) %>% 
-      stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
-      .[[1]] %>% 
-      .[, 2] %>% 
-      unique() %>% 
-      dplyr::tibble(
-        attribute_body = .
-      ) %>% 
-      dplyr::semi_join(
-        participants_attributes,
-        by = c("attribute_body" = "description")
-      )
-    
-    extra_attributes <- dplyr::tibble(
-      attribute = c("TOKEN", "FIRSTNAME", "LASTNAME", paste0("ATTRIBUTE_", c(nrow(participants_attributes), nrow(participants_attributes) + 1))),
-      description = c("token", "firstname", "lastname", "surveyurl", "optouturl"),
-      attribute_body = c("TOKEN", "FIRSTNAME", "LASTNAME", "SURVEYURL", "OPTOUTURL")
-    )
-    
-    rename <- dplyr::bind_rows(
-      attributes_body %>% 
-        dplyr::semi_join(
-          participants_attributes,
-          by = c("attribute_body" = "attribute")
-        ) %>% 
-        dplyr::left_join(
-          participants_attributes,
-          by = c("attribute_body" = "attribute")
-        ) %>% 
-        dplyr::mutate(attribute = attribute_body) %>% 
-        dplyr::select(attribute, description, attribute_body),
-      attributes_body %>% 
-        dplyr::semi_join(
-          participants_attributes,
-          by = c("attribute_body" = "description")
-        ) %>% 
-        dplyr::left_join(
-          participants_attributes,
-          by = c("attribute_body" = "description")
-        ) %>% 
-        dplyr::mutate(description = attribute_body) %>% 
-        dplyr::select(attribute, description, attribute_body),
-      attributes_body %>% 
-        dplyr::semi_join(extra_attributes, "attribute_body") %>% 
-        dplyr::left_join(extra_attributes, "attribute_body"),
-      attributes_body %>% 
-        dplyr::semi_join(extra_attributes, by = c("attribute_body" = "description")) %>% 
-        dplyr::left_join(extra_attributes %>% 
-                           dplyr::select(-attribute_body),
-                         by = c("attribute_body" = "description")) %>% 
-        dplyr::mutate(description = attribute_body)
-    ) %>% 
-      dplyr::mutate_at("description", patchr::str_normalise_colnames) %>% 
-      dplyr::rename(column = description, rename = attribute) %>% 
-      dplyr::add_row(column = "email")
-    
-    to <- patchr::rename(participants, rename) %>% 
-      patchr::normalise_colnames()
-    
-    glue_data <- rename %>% 
-      dplyr::filter(attribute_body != rename) %>% 
-      dplyr::select(-attribute_body) %>% 
-      dplyr::mutate_at("rename", ~ paste0("{", .,"}")) %>% 
-      tidyr::spread(column, rename)
-    
-    subject <- glue::glue_data(subject, .x = glue_data)
-    body <- glue::glue_data(body, .x = glue_data)
-    
+    selected_emails <- selected_emails %>% 
+      split(f = .[[attribute_sender]])
   }
   
+  rename <- paste(subject, body) %>% 
+    stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
+    .[[1]] %>% 
+    .[, 2] %>% 
+    unique() %>% 
+    dplyr::tibble(
+      attribute_body = .
+    ) %>% 
+    dplyr::semi_join(
+      dplyr::tibble(attribute_body = names(participants)),
+      by = "attribute_body"
+    ) %>% 
+    dplyr::mutate(
+      column = patchr::str_normalise_colnames(attribute_body),
+      attribute = glue::glue("ATTRIBUTE_{dplyr::row_number()}") %>% 
+        as.character(),
+      attribute = dplyr::if_else(attribute_body %in% c("firstname", "lastname"), toupper(attribute_body), attribute)
+    ) %>% 
+    dplyr::add_row(column = "email") %>% 
+    dplyr::rename(rename = attribute)
+  
+  to <- patchr::rename(participants, rename) %>% 
+    patchr::normalise_colnames()
+  
+  glue_data <- rename %>% 
+    dplyr::filter(column != rename) %>% 
+    dplyr::select(-column) %>% 
+    dplyr::mutate_at("rename", ~ paste0("{", .,"}")) %>% 
+    tidyr::spread(attribute_body, rename)
+  
+  subject <- subject %>% 
+    survey.admin::escape_space_glue(participants_attributes) %>% 
+    glue::glue_data(.x = glue_data)
+  
+  body <- body %>% 
+    survey.admin::escape_space_glue(participants_attributes) %>% 
+    glue::glue_data(.x = glue_data)
+  
   key <- limer::get_session_key()
-
+  
   survey_id_tid <- limer::mailing_create_survey(
     from = from,
     to = to,
@@ -238,36 +214,36 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
   )
   survey_id <- survey_id_tid$survey_id
   tid <- survey_id_tid$tid
-
-  if (general == FALSE) {
-
+  
+  if (progress == FALSE) {
+    
     limer::mail_registered_participant(survey_id, tid = tid)
-
-  } else if (general == TRUE) {
-
+    
+  } else if (progress == TRUE) {
+    
     withProgress(message = "Sending email :", value = 0, detail = "0%", {
-
+      
       for (i in 1:length(tid)) {
-
+        
         if (i != 1) Sys.sleep(sleep)
-
+        
         try <- tryCatch(
           limer::mail_registered_participant(survey_id, tid = tid[i]),
           error = function(e) e
         )
-
+        
         if ("error" %in% class(try)) {
-
+          
           key <- limer::get_session_key()
           mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
-
+          
         } else if (!stringr::str_detect(try$status, "\\d+ left to send$")) {
-
+          
           key <- limer::get_session_key()
           mailing <- limer::mail_registered_participant(survey_id, tid = tid[i])
-
+          
         }
-
+        
         if (crowdsourcing == FALSE) {
           
           event <- dplyr::tibble(
@@ -289,7 +265,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
           )
           
         }
-
+        
         incProgress(
           1 / length(tid),
           detail = paste0(
@@ -297,19 +273,19 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
             to$email[i]
           )
         )
-
+        
       }
-
+      
     })
-
+    
   }
-
+  
   if (delete_survey == TRUE) {
-
+    
     suppression <- limer::call_limer("delete_survey", params = list("iSurveyID" = survey_id))
-
+    
   }
-
+  
   release <- limer::release_session_key()
   
 }
@@ -338,11 +314,11 @@ mail_delivery_failure <- function(sqlite_base, imap_server, username, password, 
     mRpostman::select_mailbox(mbox = mailbox) %>%
     mRpostman::custom_search(
       #mRpostman::AND(
-        mRpostman::OR(
-          mRpostman::string("From", "Mail Delivery Subsystem"),
-          mRpostman::string("From", "Mail Delivery System"),
-          mRpostman::string("From", "postmaster@")
-        )#,
+      mRpostman::OR(
+        mRpostman::string("From", "Mail Delivery Subsystem"),
+        mRpostman::string("From", "Mail Delivery System"),
+        mRpostman::string("From", "postmaster@")
+      )#,
       #mRpostman::sent_since(format.Date(lubridate::today(), "%d-%b-%Y"))
       #)
     )
@@ -400,7 +376,7 @@ mail_delivery_failure <- function(sqlite_base, imap_server, username, password, 
 #' 
 #' @export
 set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_complete_group = c("123459" = 16, "123458" = 16, "123456" = 16), token = NULL) {
-
+  
   config_limesurvey <- impexp::sqlite_import(
     sqlite_base,
     "config"
@@ -510,7 +486,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     tidyr::gather("key", "value", dplyr::starts_with("emploiN1"), na.rm = TRUE) %>% 
     dplyr::left_join(questions, by = c("survey_id", "key" = "title")) %>% 
     dplyr::mutate(key = glue::glue("{survey_id}X{group_id}X{question_id}"))
-    
+  
   if (nrow(maj_emploi_n1) >= 1) {
     
     update <- maj_emploi_n1 %>% 
@@ -567,7 +543,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     dplyr::select(survey_id, token, submitdate) %>% 
     dplyr::mutate_at("submitdate", as.character) %>% 
     tidyr::gather("key", "value", submitdate)
-
+  
   if (nrow(complete) >= 1) {
     
     update <- complete %>% 
@@ -612,11 +588,11 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
           property = update_token$key,
           value = update_token$value
         )
-
+        
       })
     
   }
-
+  
   #### Optout complétés ####
   
   cancel_optout <- almost_complete %>% 
@@ -646,7 +622,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
   }
   
   release <- limer::release_session_key()
-
+  
 }
 
 #' pours_etud_perte_reprise

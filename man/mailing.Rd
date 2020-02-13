@@ -13,7 +13,7 @@ mailing(
   body,
   sleep,
   delete_survey = FALSE,
-  general = FALSE,
+  progress = FALSE,
   crowdsourcing = FALSE
 )
 }
@@ -34,7 +34,7 @@ mailing(
 
 \item{delete_survey}{\dots}
 
-\item{general}{\dots}
+\item{progress}{\dots}
 
 \item{crowdsourcing}{\dots}
 }

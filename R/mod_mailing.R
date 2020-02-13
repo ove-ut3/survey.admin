@@ -1,5 +1,5 @@
 # Module UI
-  
+
 #' @title   mod_mailing_ui and mod_mailing_server
 #' @description  A shiny Module.
 #'
@@ -77,16 +77,16 @@ mod_mailing_ui <- function(id){
     )
   )
 }
-    
+
 # Module Server
-    
+
 #' @rdname mod_mailing
 #' @export
 #' @keywords internal
-    
+
 mod_mailing_server <- function(input, output, session, rv){
   ns <- session$ns
-
+  
   df_mailing_list <- reactive({
     
     rv$df_participants_filter() %>% 
@@ -150,7 +150,7 @@ mod_mailing_server <- function(input, output, session, rv){
           pageLength = -1
         )
       )
-
+    
   })
   
   output$input_text_sender_email <- renderUI({
@@ -190,7 +190,7 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
   })
   
   output$input_text_sender_alias <- renderUI({
@@ -230,7 +230,7 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
   })
   
   output$input_text_mail_subject <- renderUI({
@@ -270,7 +270,7 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
   })
   
   output$input_textarea_mail_body <- renderUI({
@@ -311,22 +311,22 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
   })
   
   observeEvent(input$import_mail, {
     
     req(input$import_mail)
-
+    
     mail_template <- jsonlite::fromJSON(input$import_mail$datapath)
-
+    
     # sender email
     updateTextInput(
       session,
       "sender_email",
       value = mail_template$sender_email
     )
-
+    
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
       glue::glue("DELETE FROM mail_template WHERE key = \"sender_email\";")
@@ -340,14 +340,14 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
     # sender alias
     updateTextInput(
       session,
       "sender_alias",
       value = mail_template$sender_alias
     )
-
+    
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
       glue::glue("DELETE FROM mail_template WHERE key = \"sender_alias\";")
@@ -361,14 +361,14 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
     # mail subject
     updateTextInput(
       session,
       "mail_subject",
       value = mail_template$subject
     )
-
+    
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
       glue::glue("DELETE FROM mail_template WHERE key = \"subject\";")
@@ -382,7 +382,7 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
     # mail body
     updateTextAreaInput(
       session,
@@ -403,7 +403,7 @@ mod_mailing_server <- function(input, output, session, rv){
       ),
       "mail_template"
     )
-
+    
   })
   
   output$export_mail <- downloadHandler(
@@ -443,7 +443,7 @@ mod_mailing_server <- function(input, output, session, rv){
     
     participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
       tidyr::separate_rows(survey_id, sep = ";") %>% 
-      dplyr::filter(survey_id %in% participants$survey_id)
+      dplyr::filter(survey_id %in% selected_emails$survey_id)
     
     survey.admin::mailing(
       rv,
@@ -456,9 +456,9 @@ mod_mailing_server <- function(input, output, session, rv){
       subject = input$mail_subject,
       body = input$mail_body,
       sleep = input$mailing_sleep,
-      general = TRUE
+      progress = TRUE
     )
     
   })
- 
+  
 }
