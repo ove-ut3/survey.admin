@@ -445,6 +445,7 @@ mod_mailing_server <- function(input, output, session, rv){
       tidyr::separate_rows(survey_id, sep = ";") %>% 
       dplyr::filter(survey_id %in% selected_emails$survey_id)
     
+<<<<<<< HEAD
     survey.admin::mailing(
       rv,
       participants = selected_emails,
@@ -458,6 +459,54 @@ mod_mailing_server <- function(input, output, session, rv){
       sleep = input$mailing_sleep,
       progress = TRUE
     )
+=======
+    attribute_sender <- input$sender_alias %>% 
+      stringr::str_match_all("\\{([^\\}]+?)\\}") %>% 
+      .[[1]] %>% 
+      .[, 2] %>% 
+      unique()
+    
+    if (attribute_sender %in% names(selected_emails)) {
+      
+      selected_emails <- selected_emails %>% 
+        split(f = .[[attribute_sender]])
+      
+      purrr::walk2(
+        selected_emails,
+        names(selected_emails),
+        ~ survey.admin::mailing(
+          rv,
+          participants = .x,
+          participants_attributes = participants_attributes,
+          from = list(
+            "email" = input$sender_email,
+            "alias" = .y
+          ),
+          subject = input$mail_subject,
+          body = input$mail_body,
+          sleep = input$mailing_sleep,
+          progress = TRUE
+        )
+      )
+      
+    } else {
+      
+      survey.admin::mailing(
+        rv,
+        participants = selected_emails,
+        participants_attributes = participants_attributes,
+        from = list(
+          "email" = input$sender_email,
+          "alias" = input$sender_alias
+        ),
+        subject = input$mail_subject,
+        body = input$mail_body,
+        sleep = input$mailing_sleep,
+        progress = TRUE
+      )
+      
+    }
+>>>>>>> 4bfb2061f2d12db52770a30bf69cd968cf1f261c
     
   })
   
