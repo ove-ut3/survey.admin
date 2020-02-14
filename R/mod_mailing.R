@@ -19,7 +19,14 @@ mod_mailing_ui <- function(id){
     fluidRow(
       box(
         title = "Email list", width = 4,
-        uiOutput(ns("select_max_emails")),
+        uiOutput(ns("ui_select_max_emails")),
+        numericInput(
+          ns("select_latency_days"),
+          "Minimum days before last email contact",
+          value = 7,
+          min = 0,
+          step = 1
+        ),
         DT::DTOutput(ns("dt_emails"))
       ),
       column(
@@ -104,7 +111,7 @@ mod_mailing_server <- function(input, output, session, rv){
     
   })
   
-  output$select_max_emails <- renderUI({
+  output$ui_select_max_emails <- renderUI({
     
     max <- df_mailing_list() %>% 
       dplyr::count(token) %>% 
@@ -134,19 +141,34 @@ mod_mailing_server <- function(input, output, session, rv){
   
   output$dt_emails <- DT::renderDT({
     
-    req(input$select_max_email_per_token)
+    req(
+      input$select_max_email_per_token,
+      input$select_latency_days
+    )
+    
+    df_phoning_team_events <- impexp::sqlite_import(
+      golem::get_golem_options("sqlite_base"),
+      "phoning_team_events"
+    )
     
     df_mailing_list() %>% 
       dplyr::arrange(token, dplyr::desc(date)) %>% 
       dplyr::group_by(token) %>% 
       dplyr::filter(dplyr::row_number() <= as.integer(input$select_max_email_per_token)) %>% 
       dplyr::ungroup() %>% 
+      dplyr::anti_join(
+        dplyr::bind_rows(rv$df_participants_events, df_phoning_team_events) %>% 
+          dplyr::filter(type %in% c("general mailing", "email")) %>% 
+          dplyr::mutate(diff = lubridate::today() - lubridate::ymd(date)) %>% 
+          dplyr::filter(diff < input$select_latency_days),
+        by = "token"
+      ) %>% 
       dplyr::select(token, email) %>% 
       DT::datatable(
         rownames = FALSE,
         options = list(
-          dom = "rt",
-          scrollY = '70vh',
+          dom = "rti",
+          scrollY = '60vh',
           pageLength = -1
         )
       )
