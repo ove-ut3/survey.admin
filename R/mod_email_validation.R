@@ -110,7 +110,7 @@ mod_email_validation_server <- function(input, output, session, rv){
         by = "token"
       ) %>%
       dplyr::select(token, email = value, firstname, lastname) %>%
-      dplyr::filter(!caractr::str_validate_email(email))
+      dplyr::filter(!str_validate_email(email))
     
     if (nrow(df) >= 1) {
       tagList(
@@ -205,7 +205,7 @@ mod_email_validation_server <- function(input, output, session, rv){
         by = "token"
       ) %>% 
       dplyr::select(token, email = value, firstname, lastname) %>% 
-      dplyr::filter(caractr::str_validate_email(email)) %>% 
+      dplyr::filter(str_validate_email(email)) %>% 
       dplyr::mutate(domain = stringr::str_match(email, "@(.+)")[, 2]) %>%
       dplyr::group_by(domain) %>%
       dplyr::summarise(n = dplyr::n()) %>%

@@ -541,8 +541,8 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
       title_sq = stringr::str_match(key, "^([^\\.]+)\\.(.+)")[, 3]
     ) %>% 
     dplyr::inner_join(questions, by = c("survey_id", "title")) %>% 
-    dplyr::mutate(question_id = caractr::str_paste(question_id, title_sq, sep = "")) %>% 
-    dplyr::mutate(key = glue::glue("{survey_id}X{group_id}X{question_id}"))
+    tidyr::unite(question_id, question_id, title_sq, sep = "", na.rm = TRUE) %>%
+    tidyr::unite(key, survey_id, group_id, question_id, remove = FALSE, sep = "X")
   
   if (nrow(annuaire_email) >= 1) {
     

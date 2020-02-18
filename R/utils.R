@@ -1,3 +1,9 @@
+str_validate_email <- function(email) {
+  
+  stringr::str_detect(email, stringr::regex("^[a-z0-9\\._%-]+@[a-z0-9\\.-]+\\.[a-z]{2,4}$", ignore_case = TRUE))
+  
+}
+
 test_url <- function(url, timeout = 10) {
   
   if (!stringr::str_detect(url, "^http")) url <- glue::glue("http://{url}") 

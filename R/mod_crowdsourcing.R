@@ -519,7 +519,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     }
     
     participants_mailing <- rv$df_crowdsourcing_contributors %>% 
-      dplyr::filter(caractr::str_validate_email(user)) %>% 
+      dplyr::filter(str_validate_email(user)) %>% 
       dplyr::mutate(email = user) %>% 
       dplyr::mutate(lib_diplome = apogee::lib_etape(`Code.diplôme`, prefixe = "diplome", suffixe = c("ville", "option", "particularite"))) %>% 
       dplyr::select(email = user, lib_diplome, password)
@@ -540,10 +540,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     participants_mailing <- participants_mailing %>%
       dplyr::left_join(copie_destinataire, by = c("email", "lib_diplome")) %>%
       dplyr::arrange(email, lib_diplome) %>%
-      dplyr::mutate(
-        liste = caractr::str_paste(lib_diplome, " ", email_copie, sep = ''),
-        liste = caractr::str_paste("<li>", liste, "</li>", sep = "")
-      ) %>%
+      tidyr::unite(liste, lib_diplome, email_copie, na.rm = TRUE) %>% 
+      dplyr::mutate_at("liste", ~ paste0("<li>", ., "</li>")) %>% 
       dplyr::group_by(email, password) %>%
       dplyr::mutate(
         liste = ifelse(dplyr::row_number() == 1, glue::glue("<ul>{liste}"), liste),
