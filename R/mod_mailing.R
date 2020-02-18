@@ -94,9 +94,9 @@ mod_mailing_ui <- function(id){
 mod_mailing_server <- function(input, output, session, rv){
   ns <- session$ns
   
-  df_mailing_list <- reactive({
+  output$ui_select_max_emails <- renderUI({
     
-    rv$df_participants_filter() %>% 
+    max <- rv$df_participants_filter() %>% 
       dplyr::left_join(
         rv$df_participants_contacts %>% 
           dplyr::filter(
@@ -107,13 +107,7 @@ mod_mailing_server <- function(input, output, session, rv){
           dplyr::mutate_at("date", lubridate::as_date),
         by = "token"
       ) %>% 
-      tidyr::drop_na(email)
-    
-  })
-  
-  output$ui_select_max_emails <- renderUI({
-    
-    max <- df_mailing_list() %>% 
+      tidyr::drop_na(email) %>% 
       dplyr::count(token) %>% 
       dplyr::pull(n) %>% 
       max()
@@ -139,7 +133,7 @@ mod_mailing_server <- function(input, output, session, rv){
     
   })
   
-  output$dt_emails <- DT::renderDT({
+  df_mailing_list <- reactive({
     
     req(
       input$select_max_email_per_token,
@@ -151,7 +145,18 @@ mod_mailing_server <- function(input, output, session, rv){
       "phoning_team_events"
     )
     
-    df_mailing_list() %>% 
+    rv$df_participants_filter() %>% 
+      dplyr::left_join(
+        rv$df_participants_contacts %>% 
+          dplyr::filter(
+            key == "email",
+            status %in% c("valid", "unknown")
+          ) %>% 
+          dplyr::select(token, email = value, date) %>% 
+          dplyr::mutate_at("date", lubridate::as_date),
+        by = "token"
+      ) %>% 
+      tidyr::drop_na(email) %>% 
       dplyr::arrange(token, dplyr::desc(date)) %>% 
       dplyr::group_by(token) %>% 
       dplyr::filter(dplyr::row_number() <= as.integer(input$select_max_email_per_token)) %>% 
@@ -162,7 +167,13 @@ mod_mailing_server <- function(input, output, session, rv){
           dplyr::mutate(diff = lubridate::today() - lubridate::ymd(date)) %>% 
           dplyr::filter(diff < input$select_latency_days),
         by = "token"
-      ) %>% 
+      )
+    
+  })
+  
+  output$dt_emails <- DT::renderDT({
+    
+    df_mailing_list() %>% 
       dplyr::select(token, email) %>% 
       DT::datatable(
         rownames = FALSE,
@@ -451,12 +462,7 @@ mod_mailing_server <- function(input, output, session, rv){
       return()
     }
     
-    selected_emails <- df_mailing_list() %>% 
-      dplyr::arrange(token, dplyr::desc(date)) %>% 
-      dplyr::group_by(token) %>% 
-      dplyr::filter(dplyr::row_number() <= as.integer(input[["select_max_email_per_token"]])) %>% 
-      dplyr::ungroup() %>% 
-      dplyr::select(-date)
+    selected_emails <- df_mailing_list()
     
     if (!is.null(input[["dt_emails_rows_selected"]])) {
       selected_emails <- selected_emails %>% 

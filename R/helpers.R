@@ -172,7 +172,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
         as.character(),
       attribute = dplyr::if_else(attribute_body %in% c("firstname", "lastname"), toupper(attribute_body), attribute)
     ) %>% 
-    dplyr::add_row(column = "email") %>% 
+    dplyr::add_row(column = c("token", "email")) %>% 
     dplyr::rename(rename = attribute)
   
   to <- patchr::rename(participants, rename) %>% 
@@ -234,6 +234,12 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
   survey_id <- survey_id_tid$survey_id
   tid <- survey_id_tid$tid
 
+  to <- dplyr::tibble(
+    name = names(to),
+    to
+  ) %>% 
+    tidyr::unnest(to)
+  
   if (progress == FALSE) {
     
     limer::mail_registered_participant(survey_id, tid = tid)
@@ -266,7 +272,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
         if (crowdsourcing == FALSE) {
           
           event <- dplyr::tibble(
-            token = participants$token[i],
+            token = to$token[i],
             type = "general mailing",
             comment = to$email[i],
             date = as.character(lubridate::today())
