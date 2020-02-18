@@ -63,7 +63,7 @@ mod_mailing_ui <- function(id){
         box(
           title = "Send emails", width = 12,
           div(
-            style = "display: inline-block; width: 50%;", # vertical-align: middle;
+            style = "display: inline-block; width: 50%;",
             numericInput(
               ns("mailing_sleep"),
               "Sleep time in seconds between each mail",
@@ -72,13 +72,14 @@ mod_mailing_ui <- function(id){
             )
           ),
           div(
-            style = "display: inline-block;", # vertical-align: middle;
+            style = "display: inline-block;",
             actionButton(
               ns("send_email"),
               "Send mails to selected emails",
               icon = icon("paper-plane")
             )
           )
+          
         )
       )
     )
@@ -318,7 +319,7 @@ mod_mailing_server <- function(input, output, session, rv){
     textAreaInput(
       ns("mail_body"),
       label = "Body",
-      height = "400px",
+      height = "370px",
       value = isolate(rv$mailing_body),
       placeholder = "My mail body"
     )
