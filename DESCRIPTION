@@ -12,7 +12,7 @@ Imports:
     DT,
     glue,
     htmltools,
-    mRpostman,
+    impexp,
     rclipboard,
     RCurl,
     RSQLite,
@@ -24,10 +24,13 @@ Imports:
 RoxygenNote: 7.0.2
 Suggests:
     cronR,
+    mRpostman,
     survey.api,
     testthat
 Remotes:
-    JohnCoene/tippy,
+    stephLH/impexp,
     stephLH/limer@next,
     jrowen/rhandsontable,
-    daattali/shinyalert
+    daattali/shinyalert,
+    JohnCoene/tippy
+
