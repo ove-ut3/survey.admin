@@ -400,7 +400,7 @@ mail_delivery_failure <- function(sqlite_base, imap_server, username, password, 
 #' @param token \dots
 #' 
 #' @export
-set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_complete_group = c("123459" = 16, "123458" = 16, "123456" = 16), token = NULL) {
+set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_complete_group = c("123459" = 16, "123458" = 16, "123456" = 16), token = NULL, force_today = FALSE) {
   
   config_limesurvey <- impexp::sqlite_import(
     sqlite_base,
@@ -472,7 +472,6 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     dplyr::mutate_at("lastpage", as.integer) %>% 
     dplyr::mutate(max_page = purrr::map2_int(lastpage, group_order, ~ max(.x, .y))) %>% 
     dplyr::mutate(lastpage_rate = max_page / groups_number) %>%
-    dplyr::filter(lubridate::date(datestamp) != lubridate::today()) %>% 
     dplyr::select(survey_id, token, datestamp, lastpage, group_order, max_page, lastpage_rate) %>% 
     dplyr::left_join(
       dplyr::tibble(
@@ -482,6 +481,10 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
       by = "survey_id"
     ) %>% 
     dplyr::filter(max_page >= almost_complete_group)
+  
+  if (force_today == FALSE) {
+    almost_complete <- dplyr::filter(almost_complete, lubridate::date(datestamp) != lubridate::today())
+  }
   
   almost_complete_responses <- incomplete_responses %>% 
     dplyr::semi_join(almost_complete, by = c("survey_id", "token"))

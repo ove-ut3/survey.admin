@@ -67,7 +67,8 @@ mod_incomplete_responses_server <- function(input, output, session, rv){
       sqlite_base = golem::get_golem_options("sqlite_base"),
       cron_responses = golem::get_golem_options("cron_responses"), 
       almost_complete_group = c("123459" = 16, "123458" = 16, "123456" = 16),
-      token = set_complete_token$token
+      token = set_complete_token$token,
+      force_today = TRUE
     )
     
   })
