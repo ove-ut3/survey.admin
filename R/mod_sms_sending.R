@@ -169,8 +169,8 @@ mod_sms_sending_server <- function(input, output, session, rv){
       DT::datatable(
         rownames = FALSE,
         options = list(
-          dom = "rt",
-          scrollY = '70vh',
+          dom = "rti",
+          scrollY = '65vh',
           pageLength = -1
         )
       )
