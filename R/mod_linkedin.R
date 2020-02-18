@@ -259,7 +259,7 @@ mod_linkedin_server <- function(input, output, session, rv){
         textAreaInput(
           ns("invitation_text"),
           label = NULL, 
-          height = "150px", 
+          height = "140px", 
           value = isolate(rv$linkedin_invitation_text), 
           placeholder = "My invitation text"
         ),
@@ -391,7 +391,7 @@ mod_linkedin_server <- function(input, output, session, rv){
         textAreaInput(
           ns("survey_text"),
           label = NULL,
-          height = "250px",
+          height = "230px",
           value = isolate(rv$linkedin_survey_text),
           placeholder = "My survey text"
         ),
