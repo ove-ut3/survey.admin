@@ -526,9 +526,11 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
 
     copie_destinataire <- participants_mailing %>%
       dplyr::select(email, lib_diplome) %>%
-      dplyr::full_join(participants_mailing %>%
-                         dplyr::select(email_copie = email, lib_diplome),
-                       by = "lib_diplome") %>%
+      dplyr::full_join(
+        participants_mailing %>%
+          dplyr::select(email_copie = email, lib_diplome),
+        by = "lib_diplome"
+      ) %>%
       dplyr::filter(email != email_copie) %>%
       dplyr::group_by(email, lib_diplome) %>%
       dplyr::summarise(email_copie = paste0(email_copie, collapse = " ; ")) %>%
@@ -538,8 +540,10 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     participants_mailing <- participants_mailing %>%
       dplyr::left_join(copie_destinataire, by = c("email", "lib_diplome")) %>%
       dplyr::arrange(email, lib_diplome) %>%
-      dplyr::mutate(liste = caractr::str_paste(lib_diplome, " ", email_copie, sep = ''),
-                    liste = caractr::str_paste("<li>", liste, "</li>", sep = "")) %>%
+      dplyr::mutate(
+        liste = caractr::str_paste(lib_diplome, " ", email_copie, sep = ''),
+        liste = caractr::str_paste("<li>", liste, "</li>", sep = "")
+      ) %>%
       dplyr::group_by(email, password) %>%
       dplyr::mutate(
         liste = ifelse(dplyr::row_number() == 1, glue::glue("<ul>{liste}"), liste),
