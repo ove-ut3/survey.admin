@@ -27,8 +27,7 @@ app_ui <- function() {
           menuItem("Linkedin", tabName = "tab_linkedin", icon = icon("linkedin", class = "fa fa-linkedin")),
           menuItem("SMS sending", tabName = "tab_sms_sending", icon = icon("mobile")),
           menuItem("Phoning team", tabName = "tab_phoning", icon = icon("headset")),
-          menuItem("Incomplete responses", tabName = "tab_incomplete_responses"),
-          menuItem("Responses stats", tabName = "tab_reponses_stats", icon = icon("chart-bar")),
+          menuItem("Incomplete responses", tabName = "tab_incomplete_responses", icon = icon("pencil-alt")),
           hr(),
           menuItem("Selected filters", icon = icon("filter")),
           shiny.modules::selected_filters_ui("selected_filters_ui")
