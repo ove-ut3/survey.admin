@@ -191,7 +191,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     req(input$import_contributors)
     
-    contributors <- read.csv(input$import_contributors$datapath, na.strings = "")
+    contributors <- read.csv(input$import_contributors$datapath, na.strings = "", fileEncoding = "UTF-8")
 
     impexp::sqlite_export(
       golem::get_golem_options("sqlite_base"),
@@ -213,7 +213,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     if (any(!contributor_restriction %in% names(rv$df_crowdsourcing_contributors))) {
       
-      list_mutate <- stats::setNames(as.list(rep("NA_character_", length(contributor_restriction))), contributor_restriction)
+      list_mutate <- stats::setNames(as.list(rep("", length(contributor_restriction))), contributor_restriction)
       
       rv$df_crowdsourcing_contributors <- rv$df_crowdsourcing_contributors %>% 
         dplyr::mutate(!!!list_mutate)
@@ -520,9 +520,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     participants_mailing <- rv$df_crowdsourcing_contributors %>% 
       dplyr::filter(str_validate_email(user)) %>% 
-      dplyr::mutate(email = user) %>% 
-      dplyr::mutate(lib_diplome = apogee::lib_etape(`Code.diplôme`, prefixe = "diplome", suffixe = c("ville", "option", "particularite"))) %>% 
-      dplyr::select(email = user, lib_diplome, password)
+      dplyr::select(email = user, lib_diplome = `Libellé.diplôme`, password)
 
     copie_destinataire <- participants_mailing %>%
       dplyr::select(email, lib_diplome) %>%
