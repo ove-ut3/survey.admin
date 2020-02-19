@@ -213,7 +213,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     if (any(!contributor_restriction %in% names(rv$df_crowdsourcing_contributors))) {
       
-      list_mutate <- stats::setNames(list("NA_character_"), contributor_restriction)
+      list_mutate <- stats::setNames(as.list(rep("NA_character_", length(contributor_restriction))), contributor_restriction)
       
       rv$df_crowdsourcing_contributors <- rv$df_crowdsourcing_contributors %>% 
         dplyr::mutate(!!!list_mutate)
