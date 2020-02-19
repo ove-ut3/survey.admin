@@ -519,7 +519,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     
     update <- maj_emploi_n1 %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         limer::update_responses(
           survey_id = update_token$survey_id,
@@ -551,7 +551,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     
     update <- annuaire_email %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         limer::update_responses(
           survey_id = update_token$survey_id,
@@ -576,7 +576,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     
     update <- complete %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         limer::update_responses(
           survey_id = update_token$survey_id,
@@ -608,7 +608,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     
     update <- participants_complete %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         limer::set_participant_properties(
           survey_id = update_token$survey_id,
@@ -634,7 +634,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     
     update <- participants_complete %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         set_participant_properties <- limer::call_limer(
           method = "set_participant_properties", 
@@ -749,7 +749,7 @@ pours_etud_perte_reprise <- function(sqlite_base) {
     
     update <- maj_pours_etud %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         limer::update_responses(
           survey_id = update_token$survey_id,
@@ -778,7 +778,7 @@ pours_etud_perte_reprise <- function(sqlite_base) {
     
     update <- maj_etud_act %>% 
       split(1:nrow(.)) %>% 
-      pbapply::pblapply(function(update_token) {
+      lapply(function(update_token) {
         
         limer::update_responses(
           survey_id = update_token$survey_id,
