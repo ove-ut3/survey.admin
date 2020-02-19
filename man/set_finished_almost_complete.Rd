@@ -8,7 +8,8 @@ set_finished_almost_complete(
   sqlite_base,
   cron_responses,
   almost_complete_group = c(`123459` = 16, `123458` = 16, `123456` = 16),
-  token = NULL
+  token = NULL,
+  force_today = FALSE
 )
 }
 \arguments{
