@@ -238,8 +238,7 @@ mod_init_sqlite_server <- function(input, output, session, rv){
       sqlite_base, 
       dplyr::tibble(
         user = character(0),
-        order = integer(0),
-        to_contact = integer(0)
+        order = integer(0)
       ),
       "phoning_team_group"
     )
