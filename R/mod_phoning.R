@@ -494,16 +494,7 @@ mod_phoning_server <- function(input, output, session, rv){
         na.omit()
       
       rv$df_phoning_team_group <- rv$df_phoning_team_group %>% 
-        dplyr::left_join(
-          update %>% 
-            dplyr::select(attributes_groups, user_update = user, order_update = order),
-          by = attributes_groups
-        ) %>% 
-        dplyr::mutate(
-          user = dplyr::if_else(!is.na(user_update), user_update, user),
-          order = dplyr::if_else(!is.na(order_update), order_update, order)
-        ) %>% 
-        dplyr::select(-user_update, -order_update)
+        patchr::df_update(update, by = attributes_groups)
       
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"),
