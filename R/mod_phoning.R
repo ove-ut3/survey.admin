@@ -142,16 +142,26 @@ mod_phoning_server <- function(input, output, session, rv){
     
     if (attributes_groups %in% names(rv$df_phoning_team_group)) {
       
+      groups_remaining <- rv$df_participants_filter() %>% 
+        dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
+        survey.phoning::df_groups(attributes_groups) %>% 
+        tidyr::drop_na(user)
+      
+      if (!is.null(input$maximal_date)) {
+        groups_remaining <- dplyr::filter(groups_remaining, lubridate::as_date(last_event_date) <= lubridate::as_date(input$maximal_date))
+      }
+      
       phoning_team_events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events")
       
       if (!is.null(input$maximal_date)) {
-        phoning_team_events <- dplyr::filter(phoning_team_events, lubridate::as_date(date) > lubridate::as_date(input$maximal_date))
+        phoning_team_events <- dplyr::filter(phoning_team_events, lubridate::as_date(date) >= lubridate::today() - 7)
       }
       
       remaining <- rv$df_participants_filter() %>% 
         dplyr::filter(!completed, !optout) %>% 
         dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
         tidyr::drop_na(user) %>% 
+        dplyr::semi_join(groups_remaining, by = attributes_groups) %>% 
         dplyr::anti_join(
           phoning_team_events,
           by = "token"
