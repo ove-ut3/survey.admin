@@ -49,6 +49,7 @@ Remotes:
     ove-ut3/patchr,
     jrowen/rhandsontable,
     daattali/shinyalert,
+    stephLH/shinydashboardPlus@boxplus_sidebar_title
     ove-ut3/shiny.modules,
     ove-ut3/survey.api,
     ove-ut3/survey.phoning,
