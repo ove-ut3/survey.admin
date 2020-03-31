@@ -11,7 +11,7 @@ cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_resp
     
     participants <- sqlite_base %>% 
       impexp::sqlite_import("participants") %>% 
-      patchr::normalise_colnames() %>% 
+      janitor::clean_names() %>% 
       dplyr::arrange(token) %>% 
       dplyr::select(survey_id, token)
     
@@ -167,7 +167,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
       by = "attribute_body"
     ) %>% 
     dplyr::mutate(
-      column = patchr::str_normalise_colnames(attribute_body),
+      column = janitor::make_clean_names(attribute_body),
       attribute = glue::glue("ATTRIBUTE_{dplyr::row_number()}") %>% 
         as.character(),
       attribute = dplyr::if_else(attribute_body %in% c("firstname", "lastname"), toupper(attribute_body), attribute)
@@ -176,7 +176,7 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
     dplyr::rename(rename = attribute)
   
   to <- patchr::rename(participants, rename) %>% 
-    patchr::normalise_colnames()
+    janitor::clean_names()
   
   glue_data <- rename %>% 
     dplyr::filter(column != rename) %>% 
@@ -597,7 +597,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
     dplyr::left_join(
       sqlite_base %>% 
         impexp::sqlite_import("participants") %>% 
-        patchr::normalise_colnames() %>% 
+        janitor::clean_names() %>% 
         dplyr::arrange(token) %>% 
         dplyr::select(survey_id, token, tid),
       by = c("survey_id", "token")

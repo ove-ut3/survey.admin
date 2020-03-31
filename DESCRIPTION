@@ -16,6 +16,7 @@ Imports:
     htmltools,
     httr,
     impexp,
+    janitor,
     jsonlite,
     limer,
     lubridate,

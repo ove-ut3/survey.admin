@@ -82,7 +82,7 @@ mod_participants_server <- function(input, output, session, rv){
     rv$df_participants_filter() %>% 
       patchr::rename(
         rv$df_participants_attributes %>% 
-          dplyr::mutate(column = patchr::str_normalise_colnames(description)) %>% 
+          dplyr::mutate(column = janitor::make_clean_names(description)) %>% 
           dplyr::select(column, rename = description),
         drop = FALSE
       ) %>% 

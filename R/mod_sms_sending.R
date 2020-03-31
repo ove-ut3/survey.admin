@@ -459,7 +459,7 @@ mod_sms_sending_server <- function(input, output, session, rv){
                          by = c("attribute_body" = "description")) %>% 
         dplyr::mutate(description = attribute_body)
     ) %>% 
-      dplyr::mutate_at("description", patchr::str_normalise_colnames) %>% 
+      dplyr::mutate_at("description", janitor::make_clean_names) %>% 
       dplyr::rename(column = description, rename = attribute_body) %>% 
       dplyr::add_row(column = "phone")
     

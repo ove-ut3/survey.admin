@@ -37,10 +37,10 @@ app_server <- function(input, output, session) {
     golem::get_golem_options("sqlite_base"),
     "participants_attributes"
   ) %>%
-    dplyr::filter(description != patchr::str_normalise_colnames(description))
+    dplyr::filter(description != janitor::make_clean_names(description))
   labels <- df_participants_attributes$description
   names(labels) <- df_participants_attributes$description %>%
-    patchr::str_normalise_colnames()
+    janitor::make_clean_names()
 
   callModule(
     shiny.modules::selected_filters_server, "selected_filters_ui",
