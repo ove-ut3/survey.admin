@@ -538,7 +538,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     participants_mailing <- participants_mailing %>%
       dplyr::left_join(copie_destinataire, by = c("email", "lib_diplome")) %>%
       dplyr::arrange(email, lib_diplome) %>%
-      tidyr::unite(liste, lib_diplome, email_copie, na.rm = TRUE) %>% 
+      tidyr::unite(liste, lib_diplome, email_copie, sep = " ", na.rm = TRUE) %>% 
       dplyr::mutate_at("liste", ~ paste0("<li>", ., "</li>")) %>% 
       dplyr::group_by(email, password) %>%
       dplyr::mutate(
