@@ -92,9 +92,9 @@ mod_linkedin_server <- function(input, output, session, rv){
   output$select_attributes <- renderUI({
     
     selected <- rv$df_linkedin %>% 
-      dplyr::filter(key == "dt_attributes") %>% 
-      tidyr::separate_rows(value, sep = ";") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "dt_attributes") %>% 
+      tidyr::separate_rows(.data$value, sep = ";") %>% 
+      dplyr::pull(.data$value)
     
     shinyWidgets::pickerInput(
       ns("picker_select_attributes"),
@@ -116,7 +116,7 @@ mod_linkedin_server <- function(input, output, session, rv){
   output$dt_participants <- DT::renderDT({
     
     rv$df_participants_filter() %>%
-      dplyr::select(token, firstname, lastname, optout, completed, input[["picker_select_attributes"]]) %>%
+      dplyr::select(.data$token, .data$firstname, .data$lastname, .data$optout, .data$completed, input[["picker_select_attributes"]]) %>%
       DT::datatable(
         selection = list(mode = 'single', selected = 1),
         rownames = FALSE,
@@ -157,8 +157,8 @@ mod_linkedin_server <- function(input, output, session, rv){
       dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
     
     rv$linkedin_search_suffix_text <- rv$df_linkedin %>%
-      dplyr::filter(key == "search_text_input") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "search_text_input") %>% 
+      dplyr::pull(.data$value)
     
     actionButton(
       ns("button_search"),
@@ -177,8 +177,8 @@ mod_linkedin_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "linkedin"
     ) %>% 
-      dplyr::filter(key == "search_text_input") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "search_text_input") %>% 
+      dplyr::pull(.data$value)
     
     textInput(
       ns("search_suffix_text"),
@@ -250,8 +250,8 @@ mod_linkedin_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "linkedin"
     ) %>% 
-      dplyr::filter(key == glue::glue("invitation_text_{input$invitation_text_language}")) %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == glue::glue("invitation_text_{input$invitation_text_language}")) %>% 
+      dplyr::pull(.data$value)
 
     tagList(
       column(
@@ -283,13 +283,14 @@ mod_linkedin_server <- function(input, output, session, rv){
       input$invitation_text
     )
     
-    df_linkedin_fiter <- dplyr::filter(rv$df_participants_filter(), dplyr::row_number() == input$dt_participants_rows_selected)
+    df_linkedin_fiter <- rv$df_participants_filter() %>% 
+      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
     
     clipButton_text <- input$invitation_text %>%
       survey.admin::escape_space_glue(
         rv$df_participants_attributes %>% 
-          tidyr::separate_rows(survey_id, sep = ";") %>% 
-          dplyr::filter(survey_id == df_linkedin_fiter$survey_id)
+          tidyr::separate_rows(.data$survey_id, sep = ";") %>% 
+          dplyr::filter(.data$survey_id == df_linkedin_fiter$survey_id)
       ) %>% 
       glue::glue_data(.x = df_linkedin_fiter) %>% 
       glue::glue_data(.x = df_linkedin_fiter) %>% 
@@ -382,8 +383,8 @@ mod_linkedin_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "linkedin"
     ) %>% 
-      dplyr::filter(key == glue::glue("survey_text_{input$survey_text_language}")) %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == glue::glue("survey_text_{input$survey_text_language}")) %>% 
+      dplyr::pull(.data$value)
     
     tagList(
       column(
@@ -415,13 +416,14 @@ mod_linkedin_server <- function(input, output, session, rv){
       input$survey_text
     )
     
-    df_linkedin_fiter <- dplyr::filter(rv$df_participants_filter(), dplyr::row_number() == input$dt_participants_rows_selected)
+    df_linkedin_fiter <- rv$df_participants_filter() %>% 
+      dplyr::filter(dplyr::row_number() == input$dt_participants_rows_selected)
     
     clipButton_text <- input$survey_text %>%
       survey.admin::escape_space_glue(
         rv$df_participants_attributes %>% 
-          tidyr::separate_rows(survey_id, sep = ";") %>% 
-          dplyr::filter(survey_id == df_linkedin_fiter$survey_id)
+          tidyr::separate_rows(.data$survey_id, sep = ";") %>% 
+          dplyr::filter(.data$survey_id == df_linkedin_fiter$survey_id)
       ) %>% 
       glue::glue_data(.x = df_linkedin_fiter) %>% 
       glue::glue_data(.x = df_linkedin_fiter) %>% 

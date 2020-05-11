@@ -249,8 +249,8 @@ mod_init_sqlite_server <- function(input, output, session, rv){
   rv$df_participants <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants", check.names = FALSE) %>% 
     dplyr::rename_all(stringr::str_replace_all, "\\.", " ")
   rv$df_participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
-    dplyr::mutate(num_attribute = as.integer(stringr::str_match(attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
-    dplyr::arrange(num_attribute)
+    dplyr::mutate(num_attribute = as.integer(stringr::str_match(.data$attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
+    dplyr::arrange(.data$num_attribute)
   
   rv$df_participants_contacts <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_contacts")
   rv$df_participants_events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_events")

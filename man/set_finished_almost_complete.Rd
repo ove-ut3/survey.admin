@@ -20,6 +20,8 @@ set_finished_almost_complete(
 \item{almost_complete_group}{\dots}
 
 \item{token}{\dots}
+
+\item{force_today}{\dots}
 }
 \description{
 set_finished_almost_complete

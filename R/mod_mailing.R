@@ -101,16 +101,16 @@ mod_mailing_server <- function(input, output, session, rv){
       dplyr::left_join(
         rv$df_participants_contacts %>% 
           dplyr::filter(
-            key == "email",
-            status %in% c("valid", "unknown")
+            .data$key == "email",
+            .data$status %in% c("valid", "unknown")
           ) %>% 
-          dplyr::select(token, email = value, date) %>% 
+          dplyr::select(.data$token, email = .data$value, .data$date) %>% 
           dplyr::mutate_at("date", lubridate::as_date),
         by = "token"
       ) %>% 
-      tidyr::drop_na(email) %>% 
-      dplyr::count(token) %>% 
-      dplyr::pull(n) %>% 
+      tidyr::drop_na(.data$email) %>% 
+      dplyr::count(.data$token) %>% 
+      dplyr::pull(.data$n) %>% 
       max()
     
     if (max == -Inf) { # 0 emails
@@ -150,22 +150,22 @@ mod_mailing_server <- function(input, output, session, rv){
       dplyr::left_join(
         rv$df_participants_contacts %>% 
           dplyr::filter(
-            key == "email",
-            status %in% c("valid", "unknown")
+            .data$key == "email",
+            .data$status %in% c("valid", "unknown")
           ) %>% 
-          dplyr::select(token, email = value, date) %>% 
+          dplyr::select(.data$token, email = .data$value, .data$date) %>% 
           dplyr::mutate_at("date", lubridate::as_date),
         by = "token"
       ) %>% 
-      tidyr::drop_na(email) %>% 
-      dplyr::arrange(token, dplyr::desc(date)) %>% 
-      dplyr::group_by(token) %>% 
+      tidyr::drop_na(.data$email) %>% 
+      dplyr::arrange(.data$token, dplyr::desc(.data$date)) %>% 
+      dplyr::group_by(.data$token) %>% 
       dplyr::filter(dplyr::row_number() <= as.integer(input$select_max_email_per_token)) %>% 
       dplyr::ungroup() %>% 
       dplyr::anti_join(
         dplyr::bind_rows(rv$df_participants_events, df_phoning_team_events) %>% 
-          dplyr::filter(type %in% c("general mailing", "email")) %>% 
-          dplyr::mutate(diff = lubridate::today() - lubridate::ymd(date)) %>% 
+          dplyr::filter(.data$type %in% c("general mailing", "email")) %>% 
+          dplyr::mutate(diff = lubridate::today() - lubridate::ymd(.data$date)) %>% 
           dplyr::filter(diff < input$select_latency_days),
         by = "token"
       )
@@ -175,7 +175,7 @@ mod_mailing_server <- function(input, output, session, rv){
   output$dt_emails <- DT::renderDT({
     
     df_mailing_list() %>% 
-      dplyr::select(token, email) %>% 
+      dplyr::select(.data$token, .data$email) %>% 
       DT::datatable(
         rownames = FALSE,
         options = list(
@@ -193,8 +193,8 @@ mod_mailing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "mail_template"
     ) %>% 
-      dplyr::filter(key == "sender_email") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "sender_email") %>% 
+      dplyr::pull(.data$value)
     
     textInput(
       ns("sender_email"),
@@ -233,8 +233,8 @@ mod_mailing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "mail_template"
     ) %>% 
-      dplyr::filter(key == "sender_alias") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "sender_alias") %>% 
+      dplyr::pull(.data$value)
     
     textInput(
       ns("sender_alias"),
@@ -273,8 +273,8 @@ mod_mailing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "mail_template"
     ) %>% 
-      dplyr::filter(key == "subject") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "subject") %>% 
+      dplyr::pull(.data$value)
     
     textInput(
       ns("mail_subject"),
@@ -313,8 +313,8 @@ mod_mailing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "mail_template"
     ) %>% 
-      dplyr::filter(key == "body") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "body") %>% 
+      dplyr::pull(.data$value)
     
     textAreaInput(
       ns("mail_body"),
@@ -471,8 +471,8 @@ mod_mailing_server <- function(input, output, session, rv){
     }
     
     participants_attributes <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_attributes") %>% 
-      tidyr::separate_rows(survey_id, sep = ";") %>% 
-      dplyr::filter(survey_id %in% selected_emails$survey_id)
+      tidyr::separate_rows(.data$survey_id, sep = ";") %>% 
+      dplyr::filter(.data$survey_id %in% selected_emails$survey_id)
     
     survey.admin::mailing(
       rv,

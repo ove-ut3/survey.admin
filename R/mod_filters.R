@@ -100,22 +100,22 @@ mod_filters_server <- function(input, output, session, rv){
         janitor::make_clean_names()
       
       one_cellphone <- rv$df_participants_contacts %>% 
-        dplyr::filter(stringr::str_detect(value, "^0[67] ")) %>% 
-        dplyr::select(token) %>% 
+        dplyr::filter(stringr::str_detect(.data$value, "^0[67] ")) %>% 
+        dplyr::select(.data$token) %>% 
         unique() %>% 
         dplyr::mutate(one_cellphone = TRUE)
       
       one_valid_email <- rv$df_participants_contacts %>% 
         dplyr::filter(
-          key == "email",
-          status %in% c("valid", "unknown")
+          .data$key == "email",
+          .data$status %in% c("valid", "unknown")
         ) %>% 
-        dplyr::select(token) %>% 
+        dplyr::select(.data$token) %>% 
         unique() %>% 
         dplyr::mutate(one_valid_email = TRUE)
       
       picker_contacts <- rv$df_participants %>% 
-        dplyr::select(token) %>% 
+        dplyr::select(.data$token) %>% 
         dplyr::left_join(one_cellphone, by = "token") %>% 
         dplyr::left_join(one_valid_email, by = "token") %>% 
         tidyr::replace_na(list(one_cellphone = FALSE, one_valid_email = FALSE))
@@ -153,9 +153,9 @@ mod_filters_server <- function(input, output, session, rv){
     rv$df_participants_filter_norm() %>% 
       patchr::rename(
         rv$df_participants_attributes %>% 
-          dplyr::mutate(column = janitor::make_clean_names(description)) %>% 
-          dplyr::filter(column != description) %>% 
-          dplyr::select(column, rename = description),
+          dplyr::mutate(column = janitor::make_clean_names(.data$description)) %>% 
+          dplyr::filter(.data$column != .data$description) %>% 
+          dplyr::select(.data$column, rename = .data$description),
         drop = FALSE
       ) %>% 
       dplyr::mutate_at(c("completed", "optout"), as.logical)

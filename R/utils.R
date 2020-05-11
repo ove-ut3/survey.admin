@@ -24,7 +24,7 @@ test_url <- function(url, timeout = 10) {
 
 cron_responses <- function(operation) {
   
-  if (Sys.info()[["sysname"]] == "Linux" & "cronR" %in% installed.packages()[, 1]) {
+  if (Sys.info()[["sysname"]] == "Linux" & "cronR" %in% utils::installed.packages()[, 1]) {
     
     ls_id <- cronR::cron_ls() %>% 
       stringr::str_match_all("## id:\\s+(\\w+)\n") %>% 

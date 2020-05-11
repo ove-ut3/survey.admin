@@ -74,8 +74,20 @@ mod_surveys_server <- function(input, output, session, rv){
   
   list_surveys <- reactive({
     
-    limer::call_limer("list_surveys") %>% 
-      dplyr::select(survey_id = sid, survey_title = surveyls_title, expires)
+    list_surveys <- limer::call_limer("list_surveys")
+    
+    if (is.list(list_surveys)) {
+      
+      list_surveys <- dplyr::tibble(
+        sid = character(0),
+        surveyls_title = character(0),
+        expires = character(0)
+      )
+      
+    }
+      
+    list_surveys %>% 
+      dplyr::select(survey_id = .data$sid, survey_title = .data$surveyls_title, .data$expires)
     
   })
   
@@ -108,7 +120,7 @@ mod_surveys_server <- function(input, output, session, rv){
 
     add_surveys <- list_surveys() %>%
       dplyr::anti_join(rv$df_surveys, by = "survey_id") %>% 
-      dplyr::filter(survey_title %in% input[["selected_survey_picker"]])
+      dplyr::filter(.data$survey_title %in% input[["selected_survey_picker"]])
 
     if (nrow(add_surveys) >= 1) {
       
@@ -128,15 +140,15 @@ mod_surveys_server <- function(input, output, session, rv){
         golem::get_golem_options("sqlite_base"),
         "config"
       ) %>% 
-        dplyr::filter(key == "lime_api") %>% 
-        dplyr::pull(value) %>% 
+        dplyr::filter(.data$key == "lime_api") %>% 
+        dplyr::pull(.data$value) %>% 
         stringr::str_remove("admin/remotecontrol$")
       
       add_participants <- limer::get_participants(
         add_surveys$survey_id,
         all_attributes = TRUE
       ) %>% 
-        dplyr::select(-email) %>% 
+        dplyr::select(-.data$email) %>% 
         dplyr::mutate(
           surveyurl = glue::glue("{domain_limesurvey}{survey_id}?token={token}") %>% 
             as.character(),
@@ -161,12 +173,12 @@ mod_surveys_server <- function(input, output, session, rv){
         attribute = purrr::map(add_surveys$survey_id, ~ names(limer::get_attributes_descriptions(.))),
         description = purrr::map(add_surveys$survey_id, limer::get_attributes_descriptions)
       ) %>% 
-        tidyr::unnest(c(attribute, description)) %>% 
+        tidyr::unnest(c(.data$attribute, .data$description)) %>% 
         dplyr::bind_rows(
           rv$df_participants_attributes %>% 
-            tidyr::separate_rows(survey_id, sep = ";")
+            tidyr::separate_rows(.data$survey_id, sep = ";")
         ) %>% 
-        dplyr::group_by(attribute, description) %>% 
+        dplyr::group_by(.data$attribute, .data$description) %>% 
         dplyr::summarise_at("survey_id", ~ paste(unique(.), collapse = ";")) %>% 
         dplyr::ungroup()
       
@@ -178,8 +190,8 @@ mod_surveys_server <- function(input, output, session, rv){
       )
       
       rv$df_participants_attributes <- rv$df_participants_attributes %>% 
-        dplyr::mutate(num_attribute = as.integer(stringr::str_match(attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
-        dplyr::arrange(num_attribute)
+        dplyr::mutate(num_attribute = as.integer(stringr::str_match(.data$attribute, "ATTRIBUTE_(\\d+)")[, 2])) %>% 
+        dplyr::arrange(.data$num_attribute)
       
       cron_responses(operation = "add")
       
@@ -196,17 +208,17 @@ mod_surveys_server <- function(input, output, session, rv){
       data <- data %>% 
         dplyr::left_join(
           rv$df_participants %>% 
-            dplyr::count(survey_id) %>% 
-            dplyr::rename(participants = n),
+            dplyr::count(.data$survey_id) %>% 
+            dplyr::rename(participants = .data$n),
           by = "survey_id") %>% 
           dplyr::left_join(
             impexp::r_import(golem::get_golem_options("cron_responses")) %>% 
-              dplyr::group_by(survey_id) %>% 
+              dplyr::group_by(.data$survey_id) %>% 
               dplyr::summarise_at(c("optout", "completed"), sum) %>% 
               dplyr::ungroup(),
             by = "survey_id"
           ) %>% 
-          dplyr::mutate(pct_completed = scales::percent(completed / (participants - optout), accuracy = 0.1, suffix = "\u202F%"))
+          dplyr::mutate(pct_completed = scales::percent(.data$completed / (.data$participants - .data$optout), accuracy = 0.1, suffix = "\u202F%"))
 
     }
     
@@ -244,8 +256,8 @@ mod_surveys_server <- function(input, output, session, rv){
     }
     
     rv$df_participants_attributes <- rv$df_participants_attributes %>% 
-      tidyr::separate_rows(survey_id, sep = ";") %>% 
-      dplyr::filter(!survey_id %in% !!selected_survey_id)
+      tidyr::separate_rows(.data$survey_id, sep = ";") %>% 
+      dplyr::filter(!.data$survey_id %in% !!selected_survey_id)
     
     impexp::sqlite_export(
       golem::get_golem_options("sqlite_base"),
@@ -255,8 +267,8 @@ mod_surveys_server <- function(input, output, session, rv){
     )
     
     rv$df_participants <- rv$df_participants %>% 
-      dplyr::filter(!survey_id %in% !!selected_survey_id) %>% 
-      dplyr::select(survey_id, tid, firstname, lastname, token, rv$df_participants_attributes$description)
+      dplyr::filter(!.data$survey_id %in% !!selected_survey_id) %>% 
+      dplyr::select(.data$survey_id, .data$tid, .data$firstname, .data$lastname, .data$token, rv$df_participants_attributes$description)
     
     impexp::sqlite_export(
       golem::get_golem_options("sqlite_base"),

@@ -13,7 +13,6 @@ Imports:
     glue,
     golem,
     graphr,
-    htmltools,
     httr,
     impexp,
     janitor,
@@ -24,6 +23,7 @@ Imports:
     plotly,
     purrr,
     rclipboard,
+    rlang,
     RSQLite,
     rhandsontable,
     scales,
@@ -31,22 +31,23 @@ Imports:
     shinyalert,
     shinydashboard,
     shinydashboardPlus,
+    shinymanager,
     shinyWidgets,
     shiny.modules,
     stats,
     stringr,
     tidyr,
-    tippy
+    tippy,
+    utils
 Suggests:
     cronR,
     mRpostman,
     survey.api,
-    survey.phoning,
-    testthat
+    survey.phoning
 Remotes:
     ove-ut3/graphr,
     ove-ut3/impexp,
-    stephLH/limer@next,
+    ove-ut3/limer@next,
     ove-ut3/patchr,
     jrowen/rhandsontable,
     daattali/shinyalert,

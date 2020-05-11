@@ -128,6 +128,7 @@ mod_phoning_ui <- function(id){
     
 #' @rdname mod_phoning
 #' @export
+#' @importFrom lubridate %--%
 #' @keywords internal
     
 mod_phoning_server <- function(input, output, session, rv){
@@ -136,31 +137,31 @@ mod_phoning_server <- function(input, output, session, rv){
   output$hot_users <- rhandsontable::renderRHandsontable({
     
     attributes_groups <- rv$df_config %>% 
-      dplyr::filter(key == "phoning_attributes_groups") %>% 
-      tidyr::separate_rows(value, sep = ";") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "phoning_attributes_groups") %>% 
+      tidyr::separate_rows(.data$value, sep = ";") %>% 
+      dplyr::pull(.data$value)
     
     if (attributes_groups %in% names(rv$df_phoning_team_group)) {
       
       groups_remaining <- rv$df_participants_filter() %>% 
         dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
         survey.phoning::df_groups(attributes_groups) %>% 
-        tidyr::drop_na(user)
+        tidyr::drop_na(.data$user)
       
       if (!is.null(input$maximal_date)) {
-        groups_remaining <- dplyr::filter(groups_remaining, lubridate::as_date(last_event_date) <= lubridate::as_date(input$maximal_date))
+        groups_remaining <- dplyr::filter(groups_remaining, lubridate::as_date(.data$last_event_date) <= lubridate::as_date(input$maximal_date))
       }
       
       phoning_team_events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events")
       
       if (!is.null(input$maximal_date)) {
-        phoning_team_events <- dplyr::filter(phoning_team_events, lubridate::as_date(date) >= lubridate::today() - 7)
+        phoning_team_events <- dplyr::filter(phoning_team_events, lubridate::as_date(.data$date) >= lubridate::today() - 7)
       }
       
       remaining <- rv$df_participants_filter() %>% 
-        dplyr::filter(!completed, !optout) %>% 
+        dplyr::filter(!.data$completed, !.data$optout) %>% 
         dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
-        tidyr::drop_na(user) %>% 
+        tidyr::drop_na(.data$user) %>% 
         dplyr::semi_join(groups_remaining, by = attributes_groups) %>% 
         dplyr::anti_join(
           phoning_team_events,
@@ -174,7 +175,7 @@ mod_phoning_server <- function(input, output, session, rv){
       
     }
     
-    remaining <- dplyr::count(remaining, user, name = "remaining_calls")
+    remaining <- dplyr::count(remaining, .data$user, name = "remaining_calls")
     
     rv$df_phoning_team %>% 
       dplyr::left_join(remaining, by = "user") %>% 
@@ -195,7 +196,7 @@ mod_phoning_server <- function(input, output, session, rv){
       
       update <- input$hot_users %>% 
         rhandsontable::hot_to_r() %>% 
-        dplyr::select(-remaining_calls)
+        dplyr::select(-.data$remaining_calls)
         
       impexp::sqlite_export(
         golem::get_golem_options("sqlite_base"),
@@ -214,7 +215,7 @@ mod_phoning_server <- function(input, output, session, rv){
     
     req(input$import_users)
     
-    rv$df_phoning_team <- read.csv(input$import_users$datapath) %>% 
+    rv$df_phoning_team <- utils::read.csv(input$import_users$datapath) %>% 
       dplyr::mutate_at("survey_id", as.character)
     
     impexp::sqlite_export(
@@ -231,16 +232,16 @@ mod_phoning_server <- function(input, output, session, rv){
       "phoning_team.csv"
     },
     content = function(con) {
-      write.csv(rv$df_phoning_team, con, na = "", row.names = FALSE, quote = FALSE)
+      utils::write.csv(rv$df_phoning_team, con, na = "", row.names = FALSE, quote = FALSE)
     }
   )
   
   output$picker_phoning_attributes_participants <- renderUI({
     
     selected <- rv$df_config %>% 
-      dplyr::filter(key == "phoning_attributes_participants") %>% 
-      tidyr::separate_rows(value, sep = ";") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "phoning_attributes_participants") %>% 
+      tidyr::separate_rows(.data$value, sep = ";") %>% 
+      dplyr::pull(.data$value)
     
     shinyWidgets::pickerInput(
       ns("phoning_attributes_participants"),
@@ -279,8 +280,8 @@ mod_phoning_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "config"
     ) %>% 
-      dplyr::filter(key == "phoning_help_text") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "phoning_help_text") %>% 
+      dplyr::pull(.data$value)
     
     textAreaInput(
       ns("phoning_help_text"),
@@ -308,9 +309,9 @@ mod_phoning_server <- function(input, output, session, rv){
   output$picker_attributes_groups <- renderUI({
     
     selected <- rv$df_config %>% 
-      dplyr::filter(key == "phoning_attributes_groups") %>% 
-      tidyr::separate_rows(value, sep = ";") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "phoning_attributes_groups") %>% 
+      tidyr::separate_rows(.data$value, sep = ";") %>% 
+      dplyr::pull(.data$value)
     
     shinyWidgets::pickerInput(
       ns("attributes_groups"),
@@ -346,8 +347,8 @@ mod_phoning_server <- function(input, output, session, rv){
   output$ui_picker_user <- renderUI({
     
     users <- rv$df_phoning_team %>% 
-      dplyr::filter(user != "admin") %>% 
-      dplyr::pull(user)
+      dplyr::filter(.data$user != "admin") %>% 
+      dplyr::pull(.data$user)
     
     req(length(users) >= 1)
     
@@ -378,36 +379,36 @@ mod_phoning_server <- function(input, output, session, rv){
   observeEvent(input$affect_groups, {
     
     attributes_groups <- rv$df_config %>% 
-      dplyr::filter(key == "phoning_attributes_groups") %>%
-      tidyr::separate_rows(value, sep = ";") %>%
-      dplyr::pull(value) %>% 
+      dplyr::filter(.data$key == "phoning_attributes_groups") %>%
+      tidyr::separate_rows(.data$value, sep = ";") %>%
+      dplyr::pull(.data$value) %>% 
       dplyr::na_if("") %>% 
-      na.omit()
+      stats::na.omit()
     
     users <- rv$df_phoning_team %>% 
-      dplyr::filter(user != "admin")
+      dplyr::filter(.data$user != "admin")
     
     if (!is.null(input$picker_user)) {
-      users <- dplyr::filter(users, user %in% input$picker_user)
+      users <- dplyr::filter(users, .data$user %in% input$picker_user)
     }
     
     df_groups <- rv$df_participants_filter() %>% 
       dplyr::left_join(rv$df_phoning_team_group, by = attributes_groups) %>% 
       survey.phoning::df_groups(c("survey_id", attributes_groups)) %>% 
       dplyr::semi_join(users, by = "survey_id") %>% 
-      dplyr::filter(!order %in% -1) %>% 
-      dplyr::arrange(response_rate)
+      dplyr::filter(!.data$order %in% -1) %>% 
+      dplyr::arrange(.data$response_rate)
     
     if (!is.null(input$maximal_date)) {
-      df_groups <- dplyr::filter(df_groups, is.na(last_event_date) | lubridate::as_date(last_event_date) <= lubridate::as_date(input$maximal_date))
+      df_groups <- dplyr::filter(df_groups, is.na(.data$last_event_date) | lubridate::as_date(.data$last_event_date) <= lubridate::as_date(input$maximal_date))
     }
     
     summary_user_groups <- function(df_groups) {
       
       df_groups %>% 
-        tidyr::drop_na(user) %>% 
-        dplyr::filter(user != "") %>% 
-        dplyr::group_by(user) %>% 
+        tidyr::drop_na(.data$user) %>% 
+        dplyr::filter(.data$user != "") %>% 
+        dplyr::group_by(.data$user) %>% 
         dplyr::summarise_at("to_contact", sum) %>% 
         dplyr::ungroup()
       
@@ -420,15 +421,15 @@ mod_phoning_server <- function(input, output, session, rv){
       num_line <- which(is.na(df_groups$user))[1]
       
       user <- users %>% 
-        dplyr::filter(survey_id %in% c(df_groups$survey_id[num_line], NA_character_)) %>% 
+        dplyr::filter(.data$survey_id %in% c(df_groups$survey_id[num_line], NA_character_)) %>% 
         dplyr::left_join(
           summary_user_groups(df_groups),
           by = "user"
         ) %>% 
         tidyr::replace_na(list(to_contact = 0L)) %>% 
-        dplyr::arrange(to_contact) %>% 
-        dplyr::pull(user) %>% 
-        head(1)
+        dplyr::arrange(.data$to_contact) %>% 
+        dplyr::pull(.data$user) %>% 
+        utils::head(1)
       
       if (length(user) == 1) {
         df_groups$user[num_line] <- user
@@ -441,7 +442,7 @@ mod_phoning_server <- function(input, output, session, rv){
     rv$df_phoning_team_group <- rv$df_phoning_team_group %>% 
       patchr::df_update(
         df_groups %>% 
-          dplyr::group_by(user) %>% 
+          dplyr::group_by(.data$user) %>% 
           dplyr::mutate(order = dplyr::row_number()) %>% 
           dplyr::ungroup() %>% 
           dplyr::select_at(names(rv$df_phoning_team_group)),
@@ -462,9 +463,9 @@ mod_phoning_server <- function(input, output, session, rv){
     req(input$attributes_groups)
     
     attributes_groups <- rv$df_config %>% 
-      dplyr::filter(key == "phoning_attributes_groups") %>% 
-      tidyr::separate_rows(value, sep = ";") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "phoning_attributes_groups") %>% 
+      tidyr::separate_rows(.data$value, sep = ";") %>% 
+      dplyr::pull(.data$value)
     
     if (!any(attributes_groups %in% names(rv$df_phoning_team_group))) {
       
@@ -483,22 +484,22 @@ mod_phoning_server <- function(input, output, session, rv){
       survey.phoning::df_groups(attributes_groups)
     
     users <- rv$df_phoning_team %>% 
-      dplyr::filter(user != "admin") %>% 
-      dplyr::pull(user)
+      dplyr::filter(.data$user != "admin") %>% 
+      dplyr::pull(.data$user)
     
     req(length(users) >= 1)
     
     if (!is.null(input$picker_user)) {
-      groups_user <- dplyr::filter(groups_user, user %in% input$picker_user)
+      groups_user <- dplyr::filter(groups_user, .data$user %in% input$picker_user)
     }
     
     if (!is.null(input$maximal_date)) {
-      groups_user <- dplyr::filter(groups_user, is.na(last_event_date) | lubridate::as_date(last_event_date) <= lubridate::as_date(input$maximal_date))
+      groups_user <- dplyr::filter(groups_user, is.na(.data$last_event_date) | lubridate::as_date(.data$last_event_date) <= lubridate::as_date(input$maximal_date))
     }
     
     groups_user %>% 
       dplyr::select_at(c(attributes_groups, "response_rate", "n_events", "last_event_date", "user", "order", "to_contact")) %>% 
-      dplyr::arrange(response_rate) %>% 
+      dplyr::arrange(.data$response_rate) %>% 
       rhandsontable::rhandsontable(rowHeaders = NULL) %>%
       rhandsontable::hot_table(highlightCol = TRUE, highlightRow = TRUE, stretchH = "all") %>%
       rhandsontable::hot_rows(rowHeights = 35) %>%
@@ -520,11 +521,11 @@ mod_phoning_server <- function(input, output, session, rv){
         rhandsontable::hot_to_r()
       
       attributes_groups <- rv$df_config %>% 
-        dplyr::filter(key == "phoning_attributes_groups") %>%
-        tidyr::separate_rows(value, sep = ";") %>%
-        dplyr::pull(value) %>% 
+        dplyr::filter(.data$key == "phoning_attributes_groups") %>%
+        tidyr::separate_rows(.data$value, sep = ";") %>%
+        dplyr::pull(.data$value) %>% 
         dplyr::na_if("") %>% 
-        na.omit()
+        stats::na.omit()
       
       rv$df_phoning_team_group <- rv$df_phoning_team_group %>% 
         patchr::df_update(
@@ -548,13 +549,13 @@ mod_phoning_server <- function(input, output, session, rv){
     req(input$import_groups_users)
     
     attributes_groups <- rv$df_config %>% 
-      dplyr::filter(key == "phoning_attributes_groups") %>%
-      tidyr::separate_rows(value, sep = ";") %>%
-      dplyr::pull(value) %>% 
+      dplyr::filter(.data$key == "phoning_attributes_groups") %>%
+      tidyr::separate_rows(.data$value, sep = ";") %>%
+      dplyr::pull(.data$value) %>% 
       dplyr::na_if("") %>% 
-      na.omit()
+      stats::na.omit()
     
-    rv$df_phoning_team_group <- read.csv(input$import_groups_users$datapath, fileEncoding = "UTF-8") %>% 
+    rv$df_phoning_team_group <- utils::read.csv(input$import_groups_users$datapath, fileEncoding = "UTF-8") %>% 
       dplyr::mutate_at("user", dplyr::na_if, "") %>% 
       dplyr::rename_all(stringr::str_replace_all, "\\.", " ") %>% 
       dplyr::select_at(c(attributes_groups, "user", "order"))
@@ -575,15 +576,15 @@ mod_phoning_server <- function(input, output, session, rv){
     content = function(con) {
       
       attributes_groups <- rv$df_config %>% 
-        dplyr::filter(key == "phoning_attributes_groups") %>%
-        tidyr::separate_rows(value, sep = ";") %>%
-        dplyr::pull(value) %>% 
+        dplyr::filter(.data$key == "phoning_attributes_groups") %>%
+        tidyr::separate_rows(.data$value, sep = ";") %>%
+        dplyr::pull(.data$value) %>% 
         dplyr::na_if("") %>% 
-        na.omit()
+        stats::na.omit()
       
       rv$df_phoning_team_group %>% 
-        dplyr::select(attributes_groups, user, order, to_contact) %>% 
-        write.csv(con, na = "", row.names = FALSE)
+        dplyr::select(attributes_groups, .data$user, .data$order, .data$to_contact) %>% 
+        utils::write.csv(con, na = "", row.names = FALSE)
     }
   )
   
@@ -593,9 +594,9 @@ mod_phoning_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "phoning_team_events"
     ) %>% 
-      dplyr::arrange(date) %>% 
-      tail(1) %>% 
-      dplyr::pull(date)
+      dplyr::arrange(.data$date) %>% 
+      utils::tail(1) %>% 
+      dplyr::pull(.data$date)
     
     shinyWidgets::airDatepickerInput(
       ns("users_hours_date"),
@@ -611,8 +612,8 @@ mod_phoning_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "phoning_team_events"
     ) %>% 
-      dplyr::filter(user != "admin") %>% 
-      dplyr::pull(user) %>% 
+      dplyr::filter(.data$user != "admin") %>% 
+      dplyr::pull(.data$user) %>% 
       unique() %>% sort()
     
     selectInput(
@@ -632,42 +633,40 @@ mod_phoning_server <- function(input, output, session, rv){
       "phoning_team_events"
     )
     
-    library(lubridate)
-    
     users_hours <- phoning_team_events %>% 
       dplyr::bind_rows(
         impexp::r_import(golem::get_golem_options("cron_responses")) %>% 
-          dplyr::filter(completed) %>% 
+          dplyr::filter(.data$completed) %>% 
           dplyr::inner_join(
             phoning_team_events,
             by = "token"
           ) %>% 
-          dplyr::select(token, datetime = submitdate, user) %>% 
+          dplyr::select(.data$token, datetime = .data$submitdate, .data$user) %>% 
           dplyr::mutate(
             type = "validation_questionnaire",
-            date = substr(datetime, 1, 10)
+            date = substr(.data$datetime, 1, 10)
           )
       ) %>% 
-      dplyr::arrange(date, user, datetime) %>% 
+      dplyr::arrange(.data$date, .data$user, .data$datetime) %>% 
       unique() %>% 
       dplyr::filter(
-        user == input$select_user_hours,
-        date == substr(datetime, 1, 10),
-        lubridate::hour(lubridate::ymd_hms(datetime)) >= 17,
-        lubridate::hour(lubridate::ymd_hms(datetime)) <= 20,
-        date != "2020-01-22" # DUT TC
+        .data$user == input$select_user_hours,
+        .data$date == substr(.data$datetime, 1, 10),
+        lubridate::hour(lubridate::ymd_hms(.data$datetime)) >= 17,
+        lubridate::hour(lubridate::ymd_hms(.data$datetime)) <= 20,
+        .data$date != "2020-01-22" # DUT TC
       ) %>% 
       dplyr::mutate(
         diff = round((dplyr::lag(.$datetime) %--% .$datetime) / lubridate::dminutes(), .1),
-        diff = dplyr::if_else(type == "validation_questionnaire", NA_real_, diff)
+        diff = dplyr::if_else(.data$type == "validation_questionnaire", NA_real_, .data$diff)
       ) %>% 
-      dplyr::group_by(user, date) %>%
-      dplyr::mutate(diff = ifelse(dplyr::row_number() == 1, NA_real_, diff)) %>%
+      dplyr::group_by(.data$user, .data$date) %>%
+      dplyr::mutate(diff = ifelse(dplyr::row_number() == 1, NA_real_, .data$diff)) %>%
       dplyr::ungroup() %>% 
-      dplyr::select(date, user, datetime, type, diff)
+      dplyr::select(.data$date, .data$user, .data$datetime, .data$type, .data$diff)
     
     if (!is.null(input$users_hours_date)) {
-      users_hours <- dplyr::filter(users_hours, date == input$users_hours_date)
+      users_hours <- dplyr::filter(users_hours, .data$date == input$users_hours_date)
     }
     
     users_hours %>% 
@@ -683,7 +682,7 @@ mod_phoning_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "phoning_crowdsourcing_log"
     ) %>% 
-      dplyr::filter(is.na(status)) %>% 
+      dplyr::filter(is.na(.data$status)) %>% 
       DT::datatable(
         rownames = FALSE
       )

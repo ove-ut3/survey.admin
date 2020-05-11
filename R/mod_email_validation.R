@@ -62,8 +62,8 @@ mod_email_validation_server <- function(input, output, session, rv){
         rv$df_participants_filter(),
         by = "token"
       ) %>% 
-      dplyr::filter(key == "email") %>% 
-      dplyr::select(token, email = value, service, status, date = status_date) %>% 
+      dplyr::filter(.data$key == "email") %>% 
+      dplyr::select(.data$token, email = .data$value, .data$service, .data$status, date = .data$status_date) %>% 
       dplyr::mutate_at("service", as.factor) %>%
       tidyr::replace_na(list(status = "missing")) %>% 
       dplyr::mutate_at("status", factor, levels = c("valid", "unknown", "invalid", "missing"))
@@ -78,9 +78,9 @@ mod_email_validation_server <- function(input, output, session, rv){
         dplyr::filter(dplyr::row_number() %in% input[["dt_email_domains_rows_selected"]])
       
       selected_emails <- df_validation_email() %>% 
-        dplyr::mutate(domain = stringr::str_match(email, "@(.+)")[, 2]) %>%
+        dplyr::mutate(domain = stringr::str_match(.data$email, "@(.+)")[, 2]) %>%
         dplyr::semi_join(selected_domains, by = "domain") %>% 
-        dplyr::select(-domain)
+        dplyr::select(-.data$domain)
       
     } else {
       
@@ -104,13 +104,13 @@ mod_email_validation_server <- function(input, output, session, rv){
   output$ui_email_malformed <- renderUI({
     
     df <- rv$df_participants_contacts %>%
-      dplyr::filter(key == "email") %>%
+      dplyr::filter(.data$key == "email") %>%
       dplyr::inner_join(
         rv$df_participants,
         by = "token"
       ) %>%
-      dplyr::select(token, email = value, firstname, lastname) %>%
-      dplyr::filter(!str_validate_email(email))
+      dplyr::select(.data$token, email = .data$value, .data$firstname, .data$lastname) %>%
+      dplyr::filter(!str_validate_email(.data$email))
     
     if (nrow(df) >= 1) {
       tagList(
@@ -183,7 +183,7 @@ mod_email_validation_server <- function(input, output, session, rv){
     
     rv$df_email_domains <- selected_domains %>%
       patchr::anti_join_bind(rv$df_email_domains, by = "domain", arrange = FALSE) %>%
-      dplyr::arrange(-n)
+      dplyr::arrange(-.data$n)
     
     if (nrow(impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "email_domains")) >= 1) {
       impexp::sqlite_execute_sql(
@@ -199,21 +199,23 @@ mod_email_validation_server <- function(input, output, session, rv){
   output$dt_email_domains <- DT::renderDT({
     
     rv$df_email_domains <- rv$df_participants_contacts %>% 
-      dplyr::filter(key == "email") %>%
+      dplyr::filter(.data$key == "email") %>%
       dplyr::inner_join(
         rv$df_participants_filter(),
         by = "token"
       ) %>% 
-      dplyr::select(token, email = value, firstname, lastname) %>% 
-      dplyr::filter(str_validate_email(email)) %>% 
-      dplyr::mutate(domain = stringr::str_match(email, "@(.+)")[, 2]) %>%
-      dplyr::group_by(domain) %>%
+      dplyr::select(.data$token, email = .data$value, .data$firstname, .data$lastname) %>% 
+      dplyr::filter(str_validate_email(.data$email)) %>% 
+      dplyr::mutate(domain = stringr::str_match(.data$email, "@(.+)")[, 2]) %>%
+      dplyr::group_by(.data$domain) %>%
       dplyr::summarise(n = dplyr::n()) %>%
       dplyr::ungroup() %>%
-      dplyr::arrange(-n) %>% 
-      dplyr::left_join(rv$df_email_domains %>% 
-                         dplyr::select(domain, status),
-                       by = "domain")
+      dplyr::arrange(-.data$n) %>% 
+      dplyr::left_join(
+        rv$df_email_domains %>% 
+          dplyr::select(.data$domain, .data$status),
+        by = "domain"
+      )
     
     impexp::sqlite_export(
       golem::get_golem_options("sqlite_base"),
@@ -240,7 +242,7 @@ mod_email_validation_server <- function(input, output, session, rv){
   output$ui_validation <- renderUI({
     
     validate(
-      need("survey.api" %in% installed.packages()[, 1], "Package survey.api needs to be installed.")
+      need("survey.api" %in% utils::installed.packages()[, 1], "Package survey.api needs to be installed.")
     )
     
     tagList(
@@ -285,7 +287,7 @@ mod_email_validation_server <- function(input, output, session, rv){
     }
     
     rv$df_selected_emails <- dt_selected_emails %>% 
-      dplyr::select(email) %>% 
+      dplyr::select(.data$email) %>% 
       unique()
     
     shinyalert::shinyalert(title = "Do you confirm ?", type = "info", showCancelButton = TRUE, closeOnEsc = FALSE)
@@ -313,8 +315,8 @@ mod_email_validation_server <- function(input, output, session, rv){
       )
       
       api_key = rv$df_config %>% 
-        dplyr::filter(key == !!api_key_config) %>% 
-        dplyr::pull(value)
+        dplyr::filter(.data$key == !!api_key_config) %>% 
+        dplyr::pull(.data$value)
       
       output <- dplyr::tibble(
         email = rv$df_selected_emails$email,
@@ -344,14 +346,14 @@ mod_email_validation_server <- function(input, output, session, rv){
       })
       
       output <- output %>% 
-        tidyr::unnest(validation) %>% 
+        tidyr::unnest(.data$validation) %>% 
         dplyr::mutate(service = input$service_select)
       
       patch <- rv$df_participants_contacts %>% 
-        dplyr::select(token, key, value, source, date) %>% 
+        dplyr::select(.data$token, .data$key, .data$value, .data$source, .data$date) %>% 
         dplyr::inner_join(
           output %>% 
-            dplyr::select(value = email, status, service, status_date = time),
+            dplyr::select(value = .data$email, .data$status, .data$service, status_date = "time"),
           by = "value"
         )
         
@@ -380,16 +382,16 @@ mod_email_validation_server <- function(input, output, session, rv){
     if (input$select_duplicate_token == "One email per token") {
      
       df <- df %>% 
-        dplyr::arrange(token, purrr::map_int(status, ~ which(c("valid", "unknown", "invalid", "missing") %in% .))) %>% 
-        dplyr::group_by(token) %>% 
+        dplyr::arrange(.data$token, purrr::map_int(.data$status, ~ which(c("valid", "unknown", "invalid", "missing") %in% .))) %>% 
+        dplyr::group_by(.data$token) %>% 
         dplyr::filter(dplyr::row_number() == 1) %>% 
         dplyr::ungroup()
        
     }
     
     df %>% 
-      dplyr::pull(status) %>% 
-      graphr::shiny_donut()
+      dplyr::pull(.data$status) %>% 
+      graphr::shiny_pie(donut = TRUE)
     
   })
   
