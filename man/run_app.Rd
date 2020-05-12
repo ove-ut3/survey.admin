@@ -6,6 +6,13 @@
 \usage{
 run_app(sqlite_base, cron_responses, credentials)
 }
+\arguments{
+\item{sqlite_base}{SQLite base path}
+
+\item{cron_responses}{CRON responses rda path}
+
+\item{credentials}{User tibble}
+}
 \description{
 Run the Shiny Application
 }

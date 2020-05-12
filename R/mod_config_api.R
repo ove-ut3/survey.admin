@@ -37,7 +37,7 @@ mod_config_api_server <- function(input, output, session, rv){
   output$input_text_api_key_bulkemailchecker <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "api_key_bulkemailchecker") %>% 
+      dplyr::filter(.data$key == "api_key_bulkemailchecker") %>% 
       dplyr::pull(value)
     
     textInput(ns("api_key_bulkemailchecker"), "API key bulkemailchecker.com", value = value)
@@ -47,7 +47,7 @@ mod_config_api_server <- function(input, output, session, rv){
   output$input_text_api_key_listflow <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "api_key_listflow") %>% 
+      dplyr::filter(.data$key == "api_key_listflow") %>% 
       dplyr::pull(value)
     
     textInput(ns("api_key_listflow"), "API key listflow.io", value = value)
@@ -57,7 +57,7 @@ mod_config_api_server <- function(input, output, session, rv){
   output$input_text_api_key_quickemailverification <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "api_key_quickemailverification") %>% 
+      dplyr::filter(.data$key == "api_key_quickemailverification") %>% 
       dplyr::pull(value)
     
     
@@ -68,7 +68,7 @@ mod_config_api_server <- function(input, output, session, rv){
   output$input_text_api_key_emailmarker <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "api_key_emailmarker") %>% 
+      dplyr::filter(.data$key == "api_key_emailmarker") %>% 
       dplyr::pull(value)
     
     textInput(ns("api_key_emailmarker"), "API key emailmarker.com", value = value)
@@ -78,7 +78,7 @@ mod_config_api_server <- function(input, output, session, rv){
   output$input_text_api_key_spothit <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "api_key_spothit") %>% 
+      dplyr::filter(.data$key == "api_key_spothit") %>% 
       dplyr::pull(value)
     
     textInput(ns("api_key_spothit"), "API key spot-hit.fr", value = value)

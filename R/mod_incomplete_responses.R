@@ -38,9 +38,9 @@ mod_incomplete_responses_server <- function(input, output, session, rv){
   rv$df_incomplete_responses <- reactive({
     
     rv$df_participants_filter() %>% 
-      tidyr::drop_na(lastpage_rate) %>% 
-      dplyr::arrange(dplyr::desc(lastpage_rate)) %>% 
-      dplyr::select(survey_id, token, firstname, lastname, datestamp, lastpage, group_order, lastpage_rate)
+      tidyr::drop_na(.data$lastpage_rate) %>% 
+      dplyr::arrange(dplyr::desc(.data$lastpage_rate)) %>% 
+      dplyr::select(.data$survey_id, .data$token, .data$firstname, .data$lastname, .data$datestamp, .data$lastpage, .data$group_order, .data$lastpage_rate)
     
   })
   

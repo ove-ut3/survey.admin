@@ -56,9 +56,9 @@ mod_participants_server <- function(input, output, session, rv){
   output$select_attributes <- renderUI({
     
     selected <- rv$df_config %>% 
-      dplyr::filter(key == "participants_dt_attributes") %>% 
-      tidyr::separate_rows(value, sep = ";") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "participants_dt_attributes") %>% 
+      tidyr::separate_rows(.data$value, sep = ";") %>% 
+      dplyr::pull(.data$value)
     
     shinyWidgets::pickerInput(
       ns("picker_select_attributes"),
@@ -82,11 +82,11 @@ mod_participants_server <- function(input, output, session, rv){
     rv$df_participants_filter() %>% 
       patchr::rename(
         rv$df_participants_attributes %>% 
-          dplyr::mutate(column = patchr::str_normalise_colnames(description)) %>% 
-          dplyr::select(column, rename = description),
+          dplyr::mutate(column = janitor::make_clean_names(.data$description)) %>% 
+          dplyr::select(.data$column, rename = .data$description),
         drop = FALSE
       ) %>% 
-      dplyr::select(token, firstname, lastname, optout, completed, input[["picker_select_attributes"]]) %>% 
+      dplyr::select(.data$token, .data$firstname, .data$lastname, .data$optout, .data$completed, input[["picker_select_attributes"]]) %>% 
       DT::datatable(
         rownames = FALSE,
         selection = list(mode = "single", selected = 1),
@@ -142,7 +142,7 @@ mod_participants_server <- function(input, output, session, rv){
     )
     
     rv$df_participants_contacts_filter() %>% 
-      dplyr::select(-token) %>% 
+      dplyr::select(-.data$token) %>% 
       rhandsontable::rhandsontable(rowHeaders = NULL, height = 233) %>%
       rhandsontable::hot_table(highlightCol = TRUE, highlightRow = TRUE, stretchH = "all") %>%
       rhandsontable::hot_rows(rowHeights = 35) %>%
@@ -200,14 +200,14 @@ mod_participants_server <- function(input, output, session, rv){
     impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_events") %>% 
       dplyr::bind_rows(
         impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events") %>% 
-          dplyr::select(token, type, comment, date)
+          dplyr::select(.data$token, .data$type, .data$comment, .data$date)
       ) %>% 
       dplyr::semi_join(
         rv$df_participants_contacts_filter(),
         by = "token"
       ) %>% 
-      dplyr::arrange(date) %>% 
-      dplyr::select(-token) %>% 
+      dplyr::arrange(.data$date) %>% 
+      dplyr::select(-.data$token) %>% 
       DT::datatable(
         rownames = FALSE,
         selection = list(mode = "none"),

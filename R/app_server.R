@@ -17,7 +17,7 @@ app_server <- function(input, output, session) {
     golem::get_golem_options("sqlite_base"),
     "config"
   ) %>%
-    dplyr::filter(stringr::str_detect(key, "^lime_")) %>%
+    dplyr::filter(stringr::str_detect(.data$key, "^lime_")) %>%
     split(x = .$value, f = .$key)
 
   options(lime_api = config$lime_api)
@@ -37,10 +37,10 @@ app_server <- function(input, output, session) {
     golem::get_golem_options("sqlite_base"),
     "participants_attributes"
   ) %>%
-    dplyr::filter(description != patchr::str_normalise_colnames(description))
+    dplyr::filter(.data$description != janitor::make_clean_names(.data$description))
   labels <- df_participants_attributes$description
   names(labels) <- df_participants_attributes$description %>%
-    patchr::str_normalise_colnames()
+    janitor::make_clean_names()
 
   callModule(
     shiny.modules::selected_filters_server, "selected_filters_ui",
@@ -61,8 +61,6 @@ app_server <- function(input, output, session) {
 
   callModule(mod_linkedin_server, "linkedin_ui", rv)
 
-  callModule(mod_sms_sending_server, "sms_sending_ui", rv)
-  
   callModule(mod_phoning_server, "phoning_ui", rv)
   
   callModule(mod_incomplete_responses_server, "incomplete_responses_ui", rv)

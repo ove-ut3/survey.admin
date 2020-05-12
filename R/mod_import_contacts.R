@@ -41,7 +41,7 @@ mod_import_contacts_server <- function(input, output, session, rv){
     
     req(input$import_contacts)
     
-    import_contacts <- read.csv(input$import_contacts$datapath, na.strings = "") %>% 
+    import_contacts <- utils::read.csv(input$import_contacts$datapath, na.strings = "") %>% 
       dplyr::semi_join(rv$df_participants, by = "token")
     
     rv$df_participants_contacts <- import_contacts %>% 
@@ -61,7 +61,7 @@ mod_import_contacts_server <- function(input, output, session, rv){
       "participants_contacts.csv"
     },
     content = function(con) {
-       write.csv(rv$df_participants_contacts, con, row.names = FALSE, na = "", quote = FALSE)
+       utils::write.csv(rv$df_participants_contacts, con, row.names = FALSE, na = "", quote = FALSE)
     }
   )
 

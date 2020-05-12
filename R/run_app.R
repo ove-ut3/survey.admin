@@ -1,5 +1,9 @@
 #' Run the Shiny Application
-#'
+#' 
+#' @param sqlite_base SQLite base path
+#' @param cron_responses CRON responses rda path
+#' @param credentials User tibble
+#' 
 #' @export
 #' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options

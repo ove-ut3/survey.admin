@@ -35,7 +35,7 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
   output$input_text_lime_api <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "lime_api") %>% 
+      dplyr::filter(.data$key == "lime_api") %>% 
       dplyr::pull(value)
     
     options(lime_api = value)
@@ -50,7 +50,7 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
   output$input_text_lime_username <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "lime_username") %>% 
+      dplyr::filter(.data$key == "lime_username") %>% 
       dplyr::pull(value)
     
     options(lime_username = value)
@@ -67,7 +67,7 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
   output$input_text_lime_password <- renderUI({
     
     value <- rv$df_config %>% 
-      dplyr::filter(key == "lime_password") %>% 
+      dplyr::filter(.data$key == "lime_password") %>% 
       dplyr::pull(value)
     
     options(lime_password = value)

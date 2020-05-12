@@ -25,7 +25,6 @@ app_ui <- function() {
           menuItem("Email validation", tabName = "tab_email_validation", icon = icon("at")),
           menuItem("Mailing", tabName = "tab_mailing", icon = icon("paper-plane")),
           menuItem("Linkedin", tabName = "tab_linkedin", icon = icon("linkedin", class = "fa fa-linkedin")),
-          menuItem("SMS sending", tabName = "tab_sms_sending", icon = icon("mobile")),
           menuItem("Phoning team", tabName = "tab_phoning", icon = icon("headset")),
           menuItem("Incomplete responses", tabName = "tab_incomplete_responses", icon = icon("pencil-alt")),
           hr(),
@@ -83,10 +82,6 @@ app_ui <- function() {
           tabItem(
             tabName = "tab_linkedin",
             mod_linkedin_ui("linkedin_ui")
-          ),
-          tabItem(
-            tabName = "tab_sms_sending",
-            mod_sms_sending_ui("sms_sending_ui")
           ),
           tabItem(
             tabName = "tab_phoning",

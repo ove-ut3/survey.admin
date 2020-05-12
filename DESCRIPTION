@@ -6,16 +6,16 @@ Description: Manage one or several Limesurvey surveys throught a shiny applicati
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0
 Imports:
     dplyr,
     DT,
     glue,
     golem,
     graphr,
-    htmltools,
     httr,
     impexp,
+    janitor,
     jsonlite,
     limer,
     lubridate,
@@ -23,6 +23,7 @@ Imports:
     plotly,
     purrr,
     rclipboard,
+    rlang,
     RSQLite,
     rhandsontable,
     scales,
@@ -30,22 +31,23 @@ Imports:
     shinyalert,
     shinydashboard,
     shinydashboardPlus,
+    shinymanager,
     shinyWidgets,
     shiny.modules,
     stats,
     stringr,
     tidyr,
-    tippy
+    tippy,
+    utils
 Suggests:
     cronR,
     mRpostman,
     survey.api,
-    survey.phoning,
-    testthat
+    survey.phoning
 Remotes:
     ove-ut3/graphr,
     ove-ut3/impexp,
-    stephLH/limer@next,
+    ove-ut3/limer@next,
     ove-ut3/patchr,
     jrowen/rhandsontable,
     daattali/shinyalert,

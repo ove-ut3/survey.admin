@@ -30,7 +30,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
   output$ui <- renderUI({
     
     validate(
-      need("survey.crowdsourcing" %in% installed.packages(), "Package \"survey.crowdsourcing\" must be installed.")
+      need("survey.crowdsourcing" %in% utils::installed.packages(), "Package \"survey.crowdsourcing\" must be installed.")
     )
     
     tagList(
@@ -108,18 +108,18 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     if (nrow(impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "crowdsourcing_columns")) == 0) {
 
       contacts_key <- rv$df_participants_contacts %>% 
-        dplyr::pull(key) %>% 
+        dplyr::pull(.data$key) %>% 
         unique()
       
       rv$df_crowdsourcing_columns <- dplyr::tibble(
         description = names(rv$df_participants)
       ) %>%
-        dplyr::filter(description != "tid") %>% 
+        dplyr::filter(.data$description != "tid") %>% 
         dplyr::left_join(rv$df_participants_attributes, by = "description") %>%
         tidyr::replace_na(list(num_attribute = 0L)) %>%
-        dplyr::mutate(attribute = dplyr::if_else(is.na(attribute), description, attribute)) %>%
-        dplyr::arrange(num_attribute) %>%
-        dplyr::select(column = attribute, description) %>%
+        dplyr::mutate(attribute = dplyr::if_else(is.na(.data$attribute), .data$description, .data$attribute)) %>%
+        dplyr::arrange(.data$num_attribute) %>%
+        dplyr::select(column = .data$attribute, .data$description) %>%
         dplyr::add_row(
           .after = 4,
           column = c("completed", "optout", "lastpage_rate"),
@@ -137,7 +137,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
           )
         ) %>%
         dplyr::mutate(
-          description_new = description,
+          description_new = .data$description,
           display = FALSE,
           order = NA_integer_,
           edit = FALSE,
@@ -191,7 +191,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     
     req(input$import_contributors)
     
-    contributors <- read.csv(input$import_contributors$datapath, na.strings = "", fileEncoding = "UTF-8")
+    contributors <- utils::read.csv(input$import_contributors$datapath, na.strings = "", fileEncoding = "UTF-8")
 
     impexp::sqlite_export(
       golem::get_golem_options("sqlite_base"),
@@ -207,8 +207,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
   output$dt_crowdsourcing_contributors <- DT::renderDT({
     
     contributor_restriction <- rv$df_crowdsourcing_columns %>%
-      dplyr::filter(restriction) %>% 
-      dplyr::pull(description) %>% 
+      dplyr::filter(.data$restriction) %>% 
+      dplyr::pull(.data$description) %>% 
       stringr::str_replace_all(" ", ".")
     
     if (any(!contributor_restriction %in% names(rv$df_crowdsourcing_contributors))) {
@@ -228,8 +228,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     }
     
     rv$df_crowdsourcing_contributors %>% 
-      dplyr::select(user, password, contributor_restriction) %>% 
-      dplyr::arrange(user) %>% 
+      dplyr::select(.data$user, .data$password, contributor_restriction) %>% 
+      dplyr::arrange(.data$user) %>% 
       DT::datatable(
         rownames = FALSE,
         options = list(
@@ -245,8 +245,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_mail_template"
     ) %>% 
-      dplyr::filter(key == "sender_email") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "sender_email") %>% 
+      dplyr::pull(.data$value)
     
     textInput(
       ns("sender_email"),
@@ -285,8 +285,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_mail_template"
     ) %>% 
-      dplyr::filter(key == "sender_alias") %>% 
-      dplyr::pull(value)
+      dplyr::filter(.data$key == "sender_alias") %>% 
+      dplyr::pull(.data$value)
     
     textInput(
       ns("sender_alias"),
@@ -325,8 +325,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_mail_template"
     ) %>% 
-      dplyr::filter(key == "subject") %>% 
-      dplyr::pull(value) %>% 
+      dplyr::filter(.data$key == "subject") %>% 
+      dplyr::pull(.data$value) %>% 
       stringr::str_replace_all("''", "'")
     
     textInput(
@@ -366,8 +366,8 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_mail_template"
     ) %>% 
-      dplyr::filter(key == "body") %>% 
-      dplyr::pull(value) %>% 
+      dplyr::filter(.data$key == "body") %>% 
+      dplyr::pull(.data$value) %>% 
       stringr::str_replace_all("''", "'")
     
     textAreaInput(
@@ -519,34 +519,34 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
     }
     
     participants_mailing <- rv$df_crowdsourcing_contributors %>% 
-      dplyr::filter(str_validate_email(user)) %>% 
-      dplyr::select(email = user, lib_diplome = `Libellé.diplôme`, password)
+      dplyr::filter(str_validate_email(.data$user)) %>% 
+      dplyr::select(email = .data$user, lib_diplome = "Libell\u00e9.dipl\u00f4me", .data$password)
 
     copie_destinataire <- participants_mailing %>%
-      dplyr::select(email, lib_diplome) %>%
+      dplyr::select(.data$email, .data$lib_diplome) %>%
       dplyr::full_join(
         participants_mailing %>%
-          dplyr::select(email_copie = email, lib_diplome),
+          dplyr::select(email_copie = .data$email, .data$lib_diplome),
         by = "lib_diplome"
       ) %>%
-      dplyr::filter(email != email_copie) %>%
-      dplyr::group_by(email, lib_diplome) %>%
-      dplyr::summarise(email_copie = paste0(email_copie, collapse = " ; ")) %>%
+      dplyr::filter(.data$email != .data$email_copie) %>%
+      dplyr::group_by(.data$email, .data$lib_diplome) %>%
+      dplyr::summarise_at("email_copie", paste0, collapse = " ; ") %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(email_copie = glue::glue("(contacts ayant également accès à ce diplôme : {email_copie})"))
+      dplyr::mutate(email_copie = glue::glue("(contacts ayant \u00e9galement acc\u00e8s \u00e0 ce dipl\u00f4me : {email_copie})"))
     
     participants_mailing <- participants_mailing %>%
       dplyr::left_join(copie_destinataire, by = c("email", "lib_diplome")) %>%
-      dplyr::arrange(email, lib_diplome) %>%
-      tidyr::unite(liste, lib_diplome, email_copie, na.rm = TRUE) %>% 
+      dplyr::arrange(.data$email, .data$lib_diplome) %>%
+      tidyr::unite("liste", .data$lib_diplome, .data$email_copie, sep = " ", na.rm = TRUE) %>% 
       dplyr::mutate_at("liste", ~ paste0("<li>", ., "</li>")) %>% 
-      dplyr::group_by(email, password) %>%
+      dplyr::group_by(.data$email, .data$password) %>%
       dplyr::mutate(
-        liste = ifelse(dplyr::row_number() == 1, glue::glue("<ul>{liste}"), liste),
-        liste = ifelse(dplyr::row_number() == dplyr::n(), glue::glue("{liste}</ul>"), liste)) %>%
-      dplyr::summarise(liste_formations = paste0(liste, collapse = "")) %>%
+        liste = ifelse(dplyr::row_number() == 1, glue::glue("<ul>{liste}"), .data$liste),
+        liste = ifelse(dplyr::row_number() == dplyr::n(), glue::glue("{liste}</ul>"), .data$liste)) %>%
+      dplyr::summarise(liste_formations = paste0(.data$liste, collapse = "")) %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(user = email)
+      dplyr::mutate(user = .data$email)
     
     participants_attributes <- dplyr::tibble(
       attribute = c("ATTRIBUTE_1", "ATTRIBUTE_2", "ATTRIBUTE_3"),
