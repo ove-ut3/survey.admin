@@ -38,6 +38,15 @@ mod_filters_server <- function(input, output, session, rv){
 
     req(nrow(rv$df_participants) >= 1)
     
+    if (Sys.info()[["sysname"]] == "Windows") {
+      
+      survey.admin::cron_responses_rda(
+        sqlite_base = golem::get_golem_options("sqlite_base"),
+        output_file = golem::get_golem_options("cron_responses")
+      )
+      
+    }
+    
     data_filter <- rv$df_participants %>% 
       janitor::clean_names() %>% 
       dplyr::left_join(rv$df_surveys, by = "survey_id") %>% 

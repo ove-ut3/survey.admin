@@ -102,7 +102,7 @@ mod_mailing_server <- function(input, output, session, rv){
         rv$df_participants_contacts %>% 
           dplyr::filter(
             .data$key == "email",
-            .data$status %in% c("valid", "unknown")
+            !.data$status %in% "invalid"
           ) %>% 
           dplyr::select(.data$token, email = .data$value, .data$date) %>% 
           dplyr::mutate_at("date", lubridate::as_date),
@@ -141,17 +141,12 @@ mod_mailing_server <- function(input, output, session, rv){
       input$select_latency_days
     )
     
-    df_phoning_team_events <- impexp::sqlite_import(
-      golem::get_golem_options("sqlite_base"),
-      "phoning_team_events"
-    )
-    
     rv$df_participants_filter() %>% 
       dplyr::left_join(
         rv$df_participants_contacts %>% 
           dplyr::filter(
             .data$key == "email",
-            .data$status %in% c("valid", "unknown")
+            !.data$status %in% "invalid"
           ) %>% 
           dplyr::select(.data$token, email = .data$value, .data$date) %>% 
           dplyr::mutate_at("date", lubridate::as_date),
@@ -163,7 +158,7 @@ mod_mailing_server <- function(input, output, session, rv){
       dplyr::filter(dplyr::row_number() <= as.integer(input$select_max_email_per_token)) %>% 
       dplyr::ungroup() %>% 
       dplyr::anti_join(
-        dplyr::bind_rows(rv$df_participants_events, df_phoning_team_events) %>% 
+        dplyr::bind_rows(rv$df_participants_events, rv$df_phoning_team_events) %>% 
           dplyr::filter(.data$type %in% c("general mailing", "email")) %>% 
           dplyr::mutate(diff = lubridate::today() - lubridate::ymd(.data$date)) %>% 
           dplyr::filter(diff < input$select_latency_days),

@@ -103,7 +103,7 @@ mod_email_validation_server <- function(input, output, session, rv){
   
   output$ui_email_malformed <- renderUI({
     
-    df <- rv$df_participants_contacts %>%
+    rv$df_malformed_emails <- rv$df_participants_contacts %>%
       dplyr::filter(.data$key == "email") %>%
       dplyr::inner_join(
         rv$df_participants,
@@ -112,7 +112,7 @@ mod_email_validation_server <- function(input, output, session, rv){
       dplyr::select(.data$token, email = .data$value, .data$firstname, .data$lastname) %>%
       dplyr::filter(!str_validate_email(.data$email))
     
-    if (nrow(df) >= 1) {
+    if (nrow(rv$df_malformed_emails) >= 1) {
       tagList(
         box(
           title = "Malformed email or invalid domains", width = 12, collapsible = TRUE, collapsed = TRUE,
@@ -142,7 +142,7 @@ mod_email_validation_server <- function(input, output, session, rv){
   
   output$dt_malformed_emails <- DT::renderDT({
     
-    df %>% 
+    rv$df_malformed_emails %>% 
       DT::datatable(
         rownames = FALSE,
         options = list(

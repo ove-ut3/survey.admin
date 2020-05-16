@@ -7,97 +7,95 @@
 #' @importFrom dplyr %>%
 cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_responses.rda") {
   
-  if (Sys.info()[1] == "Linux") {
-    
-    participants <- sqlite_base %>% 
-      impexp::sqlite_import("participants") %>% 
-      janitor::clean_names() %>% 
-      dplyr::arrange(.data$token) %>% 
-      dplyr::select(survey_id, .data$token)
-    
-    config_limesurvey <- impexp::sqlite_import(
-      sqlite_base,
-      "config"
+  participants <- sqlite_base %>% 
+    impexp::sqlite_import("participants") %>% 
+    janitor::clean_names() %>% 
+    dplyr::arrange(.data$token) %>% 
+    dplyr::select(survey_id, .data$token)
+  
+  config_limesurvey <- impexp::sqlite_import(
+    sqlite_base,
+    "config"
+  ) %>% 
+    dplyr::filter(stringr::str_detect(key, "^lime_")) %>% 
+    split(x = .$value, f = .$key)
+  
+  options(lime_api = config_limesurvey$lime_api)
+  options(lime_username = config_limesurvey$lime_username)
+  options(lime_password = config_limesurvey$lime_password)
+  
+  key <- limer::get_session_key()
+  
+  survey_id <- sqlite_base %>% 
+    impexp::sqlite_import("surveys") %>% 
+    dplyr::pull(survey_id)
+  
+  completed <- survey_id %>% 
+    limer::get_responses(session = FALSE) %>%
+    dplyr::select(survey_id, .data$token, .data$submitdate) %>%
+    dplyr::mutate(completed = TRUE)
+  
+  optout <- survey_id %>%
+    limer::get_participants(conditions = list("emailstatus" = "OptOut"), session = FALSE) %>%
+    dplyr::select(survey_id, .data$token) %>%
+    dplyr::mutate(optout = TRUE)
+  
+  questions <- purrr::map_df(
+    survey_id,
+    ~ limer::call_limer("list_questions", list("iSurveyID" = .)) %>% 
+      dplyr::filter(parent_qid == "0", type != "*") %>% 
+      dplyr::select(survey_id = sid, group_id = gid, title, question_order)
+  ) %>% 
+    dplyr::left_join(
+      purrr::map_df(
+        survey_id,
+        ~ limer::call_limer("list_groups", list("iSurveyID" = .)) %>% 
+          dplyr::select(survey_id = sid, group_id = gid, .data$group_order)
+      ),
+      by = c("survey_id", "group_id")
     ) %>% 
-      dplyr::filter(stringr::str_detect(key, "^lime_")) %>% 
-      split(x = .$value, f = .$key)
-    
-    options(lime_api = config_limesurvey$lime_api)
-    options(lime_username = config_limesurvey$lime_username)
-    options(lime_password = config_limesurvey$lime_password)
-    
-    key <- limer::get_session_key()
-    
-    survey_id <- sqlite_base %>% 
-      impexp::sqlite_import("surveys") %>% 
-      dplyr::pull(survey_id)
-    
-    completed <- survey_id %>% 
-      limer::get_responses(session = FALSE) %>%
-      dplyr::select(survey_id, .data$token, .data$submitdate) %>%
-      dplyr::mutate(completed = TRUE)
-    
-    optout <- survey_id %>%
-      limer::get_participants(conditions = list("emailstatus" = "OptOut"), session = FALSE) %>%
-      dplyr::select(survey_id, .data$token) %>%
-      dplyr::mutate(optout = TRUE)
-    
-    questions <- purrr::map_df(
-      survey_id,
-      ~ limer::call_limer("list_questions", list("iSurveyID" = .)) %>% 
-        dplyr::filter(parent_qid == "0", type != "*") %>% 
-        dplyr::select(survey_id = sid, group_id = gid, title, question_order)
-    ) %>% 
-      dplyr::left_join(
-        purrr::map_df(
-          survey_id,
-          ~ limer::call_limer("list_groups", list("iSurveyID" = .)) %>% 
-            dplyr::select(survey_id = sid, group_id = gid, .data$group_order)
-        ),
-        by = c("survey_id", "group_id")
-      ) %>% 
-      dplyr::mutate_at(c("group_order", "question_order"), as.integer) %>% 
-      dplyr::arrange(survey_id, .data$group_order, .data$question_order) %>% 
-      unique()
-    
-    question_groups_number <- questions %>% 
-      dplyr::group_by(survey_id) %>% 
-      dplyr::summarise(groups_number = max(.data$group_order)) %>% 
-      dplyr::ungroup()
-    
-    lastpage_rate <- survey_id %>%
-      limer::get_responses(sCompletionStatus = "incomplete", session = FALSE) %>%
-      dplyr::mutate_if(is.character, dplyr::na_if, "") %>% 
-      dplyr::select(-c(1:2, 4:5, 7, 9)) %>% 
-      dplyr::mutate(
+    dplyr::mutate_at(c("group_order", "question_order"), as.integer) %>% 
+    dplyr::arrange(survey_id, .data$group_order, .data$question_order) %>% 
+    unique()
+  
+  question_groups_number <- questions %>% 
+    dplyr::group_by(survey_id) %>% 
+    dplyr::summarise(groups_number = max(.data$group_order)) %>% 
+    dplyr::ungroup()
+  
+  lastpage_rate <- survey_id %>%
+    limer::get_responses(sCompletionStatus = "incomplete", session = FALSE) %>%
+    dplyr::mutate_if(is.character, dplyr::na_if, "") %>% 
+    dplyr::select(-c(1:2, 4:5, 7, 9)) %>% 
+    dplyr::mutate_if(is.logical, as.character) %>% 
+    tidyr::drop_na(token) %>% 
+    dplyr::mutate(
         situationProN1 = dplyr::if_else((is.na(.data$emploiN2DateDebut) | is.na(.data$emploiN2TPremierEmp)) & .data$situationProN1 == "A1", NA_character_, .data$situationProN1),
         situationProN = dplyr::if_else((is.na(.data$emploiN2DateDebut) | is.na(.data$emploiN2TPremierEmp)) & .data$situationProN == "A1", NA_character_, .data$situationProN)
       ) %>% 
-      tidyr::gather("key", "value", -survey_id, -.data$token, -.data$lastpage, -.data$datestamp, na.rm = TRUE) %>% 
-      dplyr::mutate(key = stringr::str_match(.data$key, "^([^\\.]+)")[, 2]) %>% 
-      dplyr::mutate_at("datestamp", lubridate::ymd_hms) %>% 
-      dplyr::inner_join(questions, by = c("survey_id", "key" = "title")) %>% 
-      dplyr::arrange(.data$token, .data$group_order, .data$question_order) %>% 
-      dplyr::group_by(.data$token, survey_id) %>% 
-      dplyr::filter(dplyr::row_number() == dplyr::n()) %>% 
-      dplyr::ungroup() %>% 
-      dplyr::left_join(question_groups_number, by = "survey_id") %>% 
-      dplyr::mutate(max_page = purrr::map2_int(.data$lastpage, .data$group_order, ~ max(.x, .y))) %>% 
-      dplyr::mutate(lastpage_rate = .data$max_page / .data$groups_number) %>%
-      dplyr::select(survey_id, .data$token, .data$datestamp, .data$lastpage, .data$group_order, .data$lastpage_rate)
-    
-    release <- limer::release_session_key()
-    
-    cron_responses <- participants %>%
-      dplyr::full_join(completed, by = c("survey_id", "token")) %>%
-      dplyr::full_join(optout, by = c("survey_id", "token")) %>%
-      dplyr::full_join(lastpage_rate, by = c("survey_id", "token")) %>% 
-      tidyr::replace_na(list(completed = FALSE, optout = FALSE))
-    
-    save(cron_responses, file = output_file, compress = "bzip2")
-    
-  }
+    tidyr::gather("key", "value", -survey_id, -.data$token, -.data$lastpage, -.data$datestamp, na.rm = TRUE) %>% 
+    dplyr::mutate(key = stringr::str_match(.data$key, "^([^\\.]+)")[, 2]) %>% 
+    dplyr::mutate_at("datestamp", lubridate::ymd_hms) %>% 
+    dplyr::inner_join(questions, by = c("survey_id", "key" = "title")) %>% 
+    dplyr::arrange(.data$token, .data$group_order, .data$question_order) %>% 
+    dplyr::group_by(.data$token, survey_id) %>% 
+    dplyr::filter(dplyr::row_number() == dplyr::n()) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::left_join(question_groups_number, by = "survey_id") %>% 
+    dplyr::mutate(max_page = purrr::map2_int(.data$lastpage, .data$group_order, ~ max(.x, .y))) %>% 
+    dplyr::mutate(lastpage_rate = .data$max_page / .data$groups_number) %>%
+    dplyr::select(survey_id, .data$token, .data$datestamp, .data$lastpage, .data$group_order, .data$lastpage_rate)
   
+  release <- limer::release_session_key()
+  
+  cron_responses <- participants %>%
+    dplyr::full_join(completed, by = c("survey_id", "token")) %>%
+    dplyr::full_join(optout, by = c("survey_id", "token")) %>%
+    dplyr::full_join(lastpage_rate, by = c("survey_id", "token")) %>% 
+    tidyr::replace_na(list(completed = FALSE, optout = FALSE))
+  
+  save(cron_responses, file = output_file, compress = "bzip2")
+
 }
 
 #' escape_space_glue
