@@ -72,7 +72,7 @@ mod_config_limesurvey_server <- function(input, output, session, rv){
     
     options(lime_password = value)
     
-    textInput(
+    passwordInput(
       ns("lime_password"),
       "Limesurvey password",
       value = value,

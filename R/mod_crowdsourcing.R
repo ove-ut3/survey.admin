@@ -47,11 +47,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
             ns("import_contributors"),
             "Import and replace contributors"
           ),
-          DT::DTOutput(ns("dt_crowdsourcing_contributors"), height = 528),
-          actionButton(
-            ns("generate_passwords"),
-            "Generate passwords"
-          )
+            DT::DTOutput(ns("dt_crowdsourcing_contributors"), height = 600)
         ),
         box(
           title = "Mail template", width = 7,
@@ -571,7 +567,7 @@ mod_crowdsourcing_server <- function(input, output, session, rv){
   })
   
   output$dt_crowdsourcing_log <- DT::renderDT({
-    
+
     impexp::sqlite_import(
       golem::get_golem_options("sqlite_base"),
       "crowdsourcing_log"

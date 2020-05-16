@@ -44,7 +44,13 @@ mod_import_contacts_server <- function(input, output, session, rv){
     import_contacts <- utils::read.csv(input$import_contacts$datapath, na.strings = "") %>% 
       dplyr::semi_join(rv$df_participants, by = "token")
     
+    new_columns <- setdiff(
+      names(impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_contacts")),
+      names(import_contacts)
+    )
+    
     rv$df_participants_contacts <- import_contacts %>% 
+      dplyr::mutate(!!!stats::setNames(rep(NA_character_, length(new_columns)), new_columns)) %>% 
       dplyr::select(names(impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_contacts")))
 
     impexp::sqlite_export(

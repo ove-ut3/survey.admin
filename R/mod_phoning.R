@@ -16,111 +16,7 @@
 mod_phoning_ui <- function(id){
   ns <- NS(id)
   
-  tagList(
-    fluidRow(
-      column(
-        width = 4,
-        fluidRow(
-          box(
-            title = "Team", width = 12,
-            rhandsontable::rHandsontableOutput(ns("hot_users"), height = "400px"),
-            div(
-              style = "display: inline-block; vertical-align: top;",
-              fileInput(
-                ns("import_users"),
-                label = NULL, 
-                buttonLabel = "Import users"
-              )
-            ),
-            div(
-              style = "display: inline-block; vertical-align: top;",
-              downloadButton(
-                ns("export_users"),
-                "Export users", 
-                icon = icon("save")
-              )
-            )
-          )
-        ),
-        fluidRow(
-          box(
-            title = "survey.phoning configuration", width = 12,
-            uiOutput(ns("picker_phoning_attributes_participants")),
-            uiOutput(ns("ui_text_help"))
-          )
-        )
-      ),
-      column(
-        width = 8,
-        fluidRow(
-          box(
-            title = "Groups and team", width = 12,
-            div(
-              style = "display: inline-block; width: 33%;",
-              uiOutput(ns("picker_attributes_groups"), inline = TRUE)
-            ),
-            div(
-              style = "display: inline-block; width: 33%;",
-              uiOutput(ns("ui_picker_user"), inline = TRUE)
-            ),
-            div(
-              style = "display: inline-block; width: 33%; vertical-align: top;",
-              uiOutput(ns("ui_picker_maximal_date"), inline = TRUE)
-            ),
-            br(),
-            div(
-              style = "display: inline-block; vertical-align: top;",
-              actionButton(
-                ns("affect_groups"),
-                "Affect groups automatically"
-              )
-            ),
-            div("Number of contacts per user", style = "display: inline-block; font-weight: bold; vertical-align: top;"),
-            div(
-              style = "display: inline-block; vertical-align: top;",
-              shiny::numericInput(ns("to_contact"), label = NULL, value = 200, min = 1)
-            ),
-            rhandsontable::rHandsontableOutput(ns("hot_groups_users"), height = "600px"),
-            div(br(), style = "font-size: 10px;"),
-            div(
-              style = "display: inline-block; vertical-align: top;",
-              fileInput(
-                ns("import_groups_users"),
-                label = NULL, 
-                buttonLabel = "Import groups and users"
-              )
-            ),
-            div(
-              style = "display: inline-block; vertical-align: top;",
-              downloadButton(
-                ns("export_groups_users"),
-                "Export groups and users",
-                icon = icon("save")
-              )
-            )
-          )
-        )
-      ),
-      box(
-        title = "Users hours",
-        width = 12,
-        div(
-          style = "display: inline-block; width: 50%; vertical-align: top;",
-          uiOutput(ns("ui_select_users_hours_date"))
-        ),
-        div(
-          style = "display: inline-block; width: 49%; vertical-align: top;",
-          uiOutput(ns("ui_select_user_hours"))
-        ),
-        DT::DTOutput(ns("dt_users_hours"))
-      ),
-      box(
-        title = "Contacts updates log",
-        width = 12,
-        DT::DTOutput(ns("dt_contacts_update_log"))
-      )
-    )
-  )
+  uiOutput(ns("ui"))
   
 }
     
@@ -133,6 +29,120 @@ mod_phoning_ui <- function(id){
     
 mod_phoning_server <- function(input, output, session, rv){
   ns <- session$ns
+  
+  output$ui <- renderUI({
+    
+    validate(
+      need("survey.phoning" %in% utils::installed.packages(), "Package \"survey.phoning\" must be installed.")
+    )
+    
+    tagList(
+      fluidRow(
+        column(
+          width = 4,
+          fluidRow(
+            box(
+              title = "Team", width = 12,
+              rhandsontable::rHandsontableOutput(ns("hot_users"), height = "400px"),
+              div(
+                style = "display: inline-block; vertical-align: top;",
+                fileInput(
+                  ns("import_users"),
+                  label = NULL, 
+                  buttonLabel = "Import users"
+                )
+              ),
+              div(
+                style = "display: inline-block; vertical-align: top;",
+                downloadButton(
+                  ns("export_users"),
+                  "Export users", 
+                  icon = icon("save")
+                )
+              )
+            )
+          ),
+          fluidRow(
+            box(
+              title = "survey.phoning configuration", width = 12,
+              uiOutput(ns("picker_phoning_attributes_participants")),
+              uiOutput(ns("ui_text_help"))
+            )
+          )
+        ),
+        column(
+          width = 8,
+          fluidRow(
+            box(
+              title = "Groups and team", width = 12,
+              div(
+                style = "display: inline-block; width: 33%;",
+                uiOutput(ns("picker_attributes_groups"), inline = TRUE)
+              ),
+              div(
+                style = "display: inline-block; width: 33%;",
+                uiOutput(ns("ui_picker_user"), inline = TRUE)
+              ),
+              div(
+                style = "display: inline-block; width: 33%; vertical-align: top;",
+                uiOutput(ns("ui_picker_maximal_date"), inline = TRUE)
+              ),
+              br(),
+              div(
+                style = "display: inline-block; vertical-align: top;",
+                actionButton(
+                  ns("affect_groups"),
+                  "Affect groups automatically"
+                )
+              ),
+              div("Number of contacts per user", style = "display: inline-block; font-weight: bold; vertical-align: top;"),
+              div(
+                style = "display: inline-block; vertical-align: top;",
+                shiny::numericInput(ns("to_contact"), label = NULL, value = 200, min = 1)
+              ),
+              rhandsontable::rHandsontableOutput(ns("hot_groups_users"), height = "600px"),
+              div(br(), style = "font-size: 10px;"),
+              div(
+                style = "display: inline-block; vertical-align: top;",
+                fileInput(
+                  ns("import_groups_users"),
+                  label = NULL, 
+                  buttonLabel = "Import groups and users"
+                )
+              ),
+              div(
+                style = "display: inline-block; vertical-align: top;",
+                downloadButton(
+                  ns("export_groups_users"),
+                  "Export groups and users",
+                  icon = icon("save")
+                )
+              )
+            )
+          )
+        ),
+        box(
+          title = "Users hours",
+          width = 12,
+          div(
+            style = "display: inline-block; width: 50%; vertical-align: top;",
+            uiOutput(ns("ui_select_users_hours_date"))
+          ),
+          div(
+            style = "display: inline-block; width: 49%; vertical-align: top;",
+            uiOutput(ns("ui_select_user_hours"))
+          ),
+          DT::DTOutput(ns("dt_users_hours"))
+        ),
+        box(
+          title = "Contacts updates log",
+          width = 12,
+          DT::DTOutput(ns("dt_contacts_update_log"))
+        )
+      )
+    )
+    
+  })
   
   output$hot_users <- rhandsontable::renderRHandsontable({
     
@@ -152,7 +162,7 @@ mod_phoning_server <- function(input, output, session, rv){
         groups_remaining <- dplyr::filter(groups_remaining, lubridate::as_date(.data$last_event_date) <= lubridate::as_date(input$maximal_date))
       }
       
-      phoning_team_events <- impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events")
+      phoning_team_events <- rv$df_phoning_team_events
       
       if (!is.null(input$maximal_date)) {
         phoning_team_events <- dplyr::filter(phoning_team_events, lubridate::as_date(.data$date) >= lubridate::today() - 7)
@@ -628,17 +638,12 @@ mod_phoning_server <- function(input, output, session, rv){
     
     req(input$select_user_hours)
     
-    phoning_team_events <- impexp::sqlite_import(
-      golem::get_golem_options("sqlite_base"),
-      "phoning_team_events"
-    )
-    
-    users_hours <- phoning_team_events %>% 
+    users_hours <- rv$df_phoning_team_events %>% 
       dplyr::bind_rows(
         impexp::r_import(golem::get_golem_options("cron_responses")) %>% 
           dplyr::filter(.data$completed) %>% 
           dplyr::inner_join(
-            phoning_team_events,
+            rv$df_phoning_team_events,
             by = "token"
           ) %>% 
           dplyr::select(.data$token, datetime = .data$submitdate, .data$user) %>% 
@@ -652,8 +657,8 @@ mod_phoning_server <- function(input, output, session, rv){
       dplyr::filter(
         .data$user == input$select_user_hours,
         .data$date == substr(.data$datetime, 1, 10),
-        lubridate::hour(lubridate::ymd_hms(.data$datetime)) >= 17,
-        lubridate::hour(lubridate::ymd_hms(.data$datetime)) <= 20,
+        # lubridate::hour(lubridate::ymd_hms(.data$datetime)) >= 17,
+        # lubridate::hour(lubridate::ymd_hms(.data$datetime)) <= 20,
         .data$date != "2020-01-22" # DUT TC
       ) %>% 
       dplyr::mutate(

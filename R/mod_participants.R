@@ -199,7 +199,7 @@ mod_participants_server <- function(input, output, session, rv){
     
     impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "participants_events") %>% 
       dplyr::bind_rows(
-        impexp::sqlite_import(golem::get_golem_options("sqlite_base"), "phoning_team_events") %>% 
+        rv$df_phoning_team_events %>% 
           dplyr::select(.data$token, .data$type, .data$comment, .data$date)
       ) %>% 
       dplyr::semi_join(

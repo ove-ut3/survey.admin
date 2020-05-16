@@ -76,7 +76,7 @@ mod_surveys_server <- function(input, output, session, rv){
     
     list_surveys <- limer::call_limer("list_surveys")
     
-    if (is.list(list_surveys)) {
+    if (!is.data.frame(list_surveys)) {
       
       list_surveys <- dplyr::tibble(
         sid = character(0),
@@ -204,6 +204,15 @@ mod_surveys_server <- function(input, output, session, rv){
     data <- rv$df_surveys
     
     if (nrow(data) >= 1) {
+      
+      if (Sys.info()[["sysname"]] == "Windows" & !file.exists(golem::get_golem_options("cron_responses"))) {
+        
+        survey.admin::cron_responses_rda(
+          sqlite_base = golem::get_golem_options("sqlite_base"),
+          output_file = golem::get_golem_options("cron_responses")
+        )
+        
+      }
       
       data <- data %>% 
         dplyr::left_join(
