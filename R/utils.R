@@ -40,8 +40,8 @@ cron_responses <- function(operation) {
       #file.copy(system.file(package = "survey.admin", "app/www", "cron_responses.R"), "/home/shiny/cron_responses.R")
       script <- glue::glue(
         'survey.admin::cron_responses_rda(
-           {golem::get_golem_options("sqlite_base")},
-           {golem::get_golem_options("cron_responses")}
+           \"{golem::get_golem_options("sqlite_base")}\",
+           \"{golem::get_golem_options("cron_responses")}\"
         )'
       )
       writeLines(script, "/home/shiny/cron_responses.R")
