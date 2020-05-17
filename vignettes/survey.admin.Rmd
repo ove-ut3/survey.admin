@@ -377,7 +377,7 @@ Avec un click-droit, on peut ajouter les comptes des télé-enquêteurs.
 ### Affectation des groupes de participants aux télé-enquêteurs
 
 Le second menu présente l'association entre télé-enquêteurs et groupes de participants.
-Il convient dans un premier temps de définir selon quel critère seront définisces groupes de participants grâce au menu déroulant `Attributes as group`.
+Il convient dans un premier temps de définir selon quel critère seront définis ces groupes de participants grâce au menu déroulant `Attributes as group`.
 
 Pour les enquêtes d'insertion professionnelle, le groupe naturel est la formation, c'est-à-dire l'attribut `Libellé diplôme`.
 
@@ -400,14 +400,7 @@ L'interface de `survey.phoning` peut être configurée dans ce menu.
 
 <img src="screenshots/24_phoning_team_survey_phoning.png" width="100%"/>
 
-Il est possible de spécifier l'ajout de champs dans la liste des participants de l'interface `survey.phoning`.
-
-Pour l'enquête d'insertion professionnelle, les champs suivants sont ajoutés car ils sont utiles pour la prise de contact et la passation du questionnaire :
-
-- `Sexe` : lever l'ambiguité qui peut exister avec le prénom
-- `Age`
-- `Type de diplôme précédent`
-- `Profil questionnaire` : type de questionnaire à venir (formation initiale ou continue)
+Il est possible de spécifier l'ajout de champs dans la liste des participants de l'interface `survey.phoning` (cf vignette).
 
 ### Continuité des session des télé-enquêteurs
 
