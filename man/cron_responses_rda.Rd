@@ -4,7 +4,7 @@
 \alias{cron_responses_rda}
 \title{cron_responses_rda}
 \usage{
-cron_responses_rda(sqlite_base, output_file = "/home/shiny/cron_responses.rda")
+cron_responses_rda(sqlite_base, output_file)
 }
 \arguments{
 \item{sqlite_base}{\dots}

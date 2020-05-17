@@ -5,7 +5,7 @@
 #'
 #' @export
 #' @importFrom dplyr %>%
-cron_responses_rda <- function(sqlite_base, output_file = "/home/shiny/cron_responses.rda") {
+cron_responses_rda <- function(sqlite_base, output_file) {
   
   participants <- sqlite_base %>% 
     impexp::sqlite_import("participants") %>% 
