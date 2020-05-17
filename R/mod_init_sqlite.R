@@ -194,11 +194,11 @@ mod_init_sqlite_server <- function(input, output, session, rv){
         dplyr::tibble(
           token = character(0),
           key = character(0),
+          status = character(0),
           new_value = character(0),
           old_value = character(0),
           user = character(0),
-          date = character(0),
-          status = character(0)
+          date = character(0)
         ),
         "crowdsourcing_log"
       )
@@ -286,11 +286,11 @@ mod_init_sqlite_server <- function(input, output, session, rv){
         dplyr::tibble(
           token = character(0),
           key = character(0),
+          status = character(0),
           new_value = character(0),
           old_value = character(0),
           user = character(0),
-          date = character(0),
-          status = character(0)
+          date = character(0)
         ),
         "phoning_crowdsourcing_log"
       )
