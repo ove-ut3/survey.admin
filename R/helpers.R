@@ -2,10 +2,11 @@
 #'
 #' @param sqlite_base \dots
 #' @param output_file \dots
+#' @param session \dots
 #'
 #' @export
 #' @importFrom dplyr %>%
-cron_responses_rda <- function(sqlite_base, output_file) {
+cron_responses_rda <- function(sqlite_base, output_file, session = TRUE) {
   
   participants <- sqlite_base %>% 
     impexp::sqlite_import("participants") %>% 
@@ -24,7 +25,9 @@ cron_responses_rda <- function(sqlite_base, output_file) {
   options(lime_username = config_limesurvey$lime_username)
   options(lime_password = config_limesurvey$lime_password)
   
-  key <- limer::get_session_key()
+  if (session) {
+    key <- limer::get_session_key()
+  }
   
   survey_id <- sqlite_base %>% 
     impexp::sqlite_import("surveys") %>% 
@@ -65,29 +68,48 @@ cron_responses_rda <- function(sqlite_base, output_file) {
   
   lastpage_rate <- survey_id %>%
     limer::get_responses(sCompletionStatus = "incomplete", session = FALSE) %>%
-    dplyr::mutate_if(is.character, dplyr::na_if, "") %>% 
-    dplyr::select(-c(1:2, 4:5, 7, 9)) %>% 
-    dplyr::mutate_if(is.logical, as.character) %>% 
-    tidyr::drop_na(token) %>% 
-    dplyr::mutate(
+    dplyr::mutate_if(is.character, dplyr::na_if, "")
+  
+  if (nrow(lastpage_rate) == 0) {
+    
+    lastpage_rate <- lastpage_rate %>% 
+      dplyr::mutate(
+        datestamp = lubridate::ymd_hms(NA_character_),
+        group_order = NA_integer_,
+        lastpage_rate = NA_real_
+      )
+    
+  } else {
+    
+    lastpage_rate <- lastpage_rate %>% 
+      dplyr::select(-c(1:2, 4:5, 7, 9)) %>% 
+      dplyr::mutate_if(is.logical, as.character) %>% 
+      tidyr::drop_na(.data$token) %>% 
+      dplyr::mutate(
         situationProN1 = dplyr::if_else((is.na(.data$emploiN2DateDebut) | is.na(.data$emploiN2TPremierEmp)) & .data$situationProN1 == "A1", NA_character_, .data$situationProN1),
         situationProN = dplyr::if_else((is.na(.data$emploiN2DateDebut) | is.na(.data$emploiN2TPremierEmp)) & .data$situationProN == "A1", NA_character_, .data$situationProN)
       ) %>% 
-    tidyr::gather("key", "value", -survey_id, -.data$token, -.data$lastpage, -.data$datestamp, na.rm = TRUE) %>% 
-    dplyr::mutate(key = stringr::str_match(.data$key, "^([^\\.]+)")[, 2]) %>% 
-    dplyr::mutate_at("datestamp", lubridate::ymd_hms) %>% 
-    dplyr::inner_join(questions, by = c("survey_id", "key" = "title")) %>% 
-    dplyr::arrange(.data$token, .data$group_order, .data$question_order) %>% 
-    dplyr::group_by(.data$token, survey_id) %>% 
-    dplyr::filter(dplyr::row_number() == dplyr::n()) %>% 
-    dplyr::ungroup() %>% 
-    dplyr::left_join(question_groups_number, by = "survey_id") %>% 
-    dplyr::mutate(max_page = purrr::map2_int(.data$lastpage, .data$group_order, ~ max(.x, .y))) %>% 
-    dplyr::mutate(lastpage_rate = .data$max_page / .data$groups_number) %>%
-    dplyr::select(survey_id, .data$token, .data$datestamp, .data$lastpage, .data$group_order, .data$lastpage_rate)
+      tidyr::gather("key", "value", -survey_id, -.data$token, -.data$lastpage, -.data$datestamp, na.rm = TRUE) %>% 
+      dplyr::mutate(key = stringr::str_match(.data$key, "^([^\\.]+)")[, 2]) %>% 
+      dplyr::mutate_at("datestamp", lubridate::ymd_hms) %>% 
+      dplyr::inner_join(questions, by = c("survey_id", "key" = "title")) %>% 
+      dplyr::arrange(.data$token, .data$group_order, .data$question_order) %>% 
+      dplyr::group_by(.data$token, survey_id) %>% 
+      dplyr::filter(dplyr::row_number() == dplyr::n()) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::left_join(question_groups_number, by = "survey_id") %>% 
+      dplyr::mutate(max_page = purrr::map2_int(.data$lastpage, .data$group_order, ~ max(.x, .y))) %>% 
+      dplyr::mutate(lastpage_rate = .data$max_page / .data$groups_number)
+      
+  }
   
-  release <- limer::release_session_key()
+lastpage_rate <- lastpage_rate %>% 
+  dplyr::select(.data$survey_id, .data$token, .data$datestamp, .data$lastpage, .data$group_order, .data$lastpage_rate)
   
+  if (session) {
+    release <- limer::release_session_key()
+  }
+
   cron_responses <- participants %>%
     dplyr::full_join(completed, by = c("survey_id", "token")) %>%
     dplyr::full_join(optout, by = c("survey_id", "token")) %>%
@@ -143,10 +165,11 @@ escape_space_glue <- function(string, participants_attributes) {
 #' @param delete_survey \dots
 #' @param progress \dots
 #' @param crowdsourcing \dots
+#' @param session \dots
 #' 
 #' @export
 #' @keywords internal
-mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, progress = FALSE, crowdsourcing = FALSE) {
+mailing <- function(rv, participants, participants_attributes = NULL, from, subject, body, sleep, delete_survey = FALSE, progress = FALSE, crowdsourcing = FALSE, session = TRUE) {
   
   style <- "'font-family: calibri; font-size: 11pt;'"
   body <- glue::glue("<p style={style}>{body}</p>") %>% 
@@ -213,7 +236,9 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
     
   }
 
-  key <- limer::get_session_key()
+  if (session == TRUE) {
+    key <- limer::get_session_key()
+  }
   
   survey_id_tid <- purrr::map2_df(
     to,
@@ -309,8 +334,10 @@ mailing <- function(rv, participants, participants_attributes = NULL, from, subj
     
   }
   
-  release <- limer::release_session_key()
-  
+  if (session == TRUE) {
+    release <- limer::release_session_key()
+  }
+    
 }
 
 #' mail_delivery_failure
@@ -400,19 +427,6 @@ mail_delivery_failure <- function(sqlite_base, imap_server, username, password, 
 #' 
 #' @export
 set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_complete_group = c("123459" = 16, "123458" = 16, "123456" = 16), token = NULL, force_today = FALSE) {
-  
-  config_limesurvey <- impexp::sqlite_import(
-    sqlite_base,
-    "config"
-  ) %>% 
-    dplyr::filter(stringr::str_detect(key, "^lime_")) %>% 
-    split(x = .$value, f = .$key)
-  
-  options(lime_api = config_limesurvey$lime_api)
-  options(lime_username = config_limesurvey$lime_username)
-  options(lime_password = config_limesurvey$lime_password)
-  
-  key <- limer::get_session_key()
   
   survey_id <- sqlite_base %>% 
     impexp::sqlite_import("surveys") %>% 
@@ -647,9 +661,7 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
       })
     
   }
-  
-  release <- limer::release_session_key()
-  
+
 }
 
 #' pours_etud_perte_reprise
@@ -658,19 +670,6 @@ set_finished_almost_complete <- function(sqlite_base, cron_responses, almost_com
 #' 
 #' @export
 pours_etud_perte_reprise <- function(sqlite_base) {
-  
-  config_limesurvey <- impexp::sqlite_import(
-    sqlite_base,
-    "config"
-  ) %>% 
-    dplyr::filter(stringr::str_detect(.data$key, "^lime_")) %>% 
-    split(x = .$value, f = .$key)
-  
-  options(lime_api = config_limesurvey$lime_api)
-  options(lime_username = config_limesurvey$lime_username)
-  options(lime_password = config_limesurvey$lime_password)
-  
-  key <- limer::get_session_key()
   
   survey_id <- sqlite_base %>% 
     impexp::sqlite_import("surveys") %>% 
@@ -789,9 +788,7 @@ pours_etud_perte_reprise <- function(sqlite_base) {
       })
     
   }
-  
-  release <- limer::release_session_key()
-  
+
 }
 
 #' df_participants_contacts_crowdsourcing

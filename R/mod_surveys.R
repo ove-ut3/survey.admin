@@ -43,8 +43,6 @@ mod_surveys_server <- function(input, output, session, rv){
         isTRUE(nchar(config_limesurvey[["lime_api"]]) >= 1),
         isTRUE(nchar(config_limesurvey[["lime_username"]]) >= 1),
         isTRUE(nchar(config_limesurvey[["lime_password"]]) >= 1)
-        #,
-        #!"error" %in% class(try)
       )
     ) {
       
@@ -176,7 +174,8 @@ mod_surveys_server <- function(input, output, session, rv){
         tidyr::unnest(c(.data$attribute, .data$description)) %>% 
         dplyr::bind_rows(
           rv$df_participants_attributes %>% 
-            tidyr::separate_rows(.data$survey_id, sep = ";")
+            tidyr::separate_rows(.data$survey_id, sep = ";") %>% 
+            dplyr::mutate_at("survey_id",as.character)
         ) %>% 
         dplyr::group_by(.data$attribute, .data$description) %>% 
         dplyr::summarise_at("survey_id", ~ paste(unique(.), collapse = ";")) %>% 
@@ -209,7 +208,8 @@ mod_surveys_server <- function(input, output, session, rv){
         
         survey.admin::cron_responses_rda(
           sqlite_base = golem::get_golem_options("sqlite_base"),
-          output_file = golem::get_golem_options("cron_responses")
+          output_file = golem::get_golem_options("cron_responses"),
+          session = FALSE
         )
         
       }
@@ -252,7 +252,7 @@ mod_surveys_server <- function(input, output, session, rv){
     
     impexp::sqlite_execute_sql(
       golem::get_golem_options("sqlite_base"),
-      glue::glue("DELETE FROM surveys WHERE survey_id IN (\"{paste_survey_id});")
+      glue::glue("DELETE FROM surveys WHERE survey_id IN (\"{paste_survey_id}\");")
     )
 
     rv$df_surveys <- impexp::sqlite_import(

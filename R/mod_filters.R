@@ -42,7 +42,8 @@ mod_filters_server <- function(input, output, session, rv){
       
       survey.admin::cron_responses_rda(
         sqlite_base = golem::get_golem_options("sqlite_base"),
-        output_file = golem::get_golem_options("cron_responses")
+        output_file = golem::get_golem_options("cron_responses"),
+        session = FALSE
       )
       
     }
