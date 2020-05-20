@@ -4,12 +4,14 @@
 \alias{cron_responses_rda}
 \title{cron_responses_rda}
 \usage{
-cron_responses_rda(sqlite_base, output_file)
+cron_responses_rda(sqlite_base, output_file, session = TRUE)
 }
 \arguments{
 \item{sqlite_base}{\dots}
 
 \item{output_file}{\dots}
+
+\item{session}{\dots}
 }
 \description{
 cron_responses_rda

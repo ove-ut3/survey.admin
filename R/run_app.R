@@ -11,7 +11,13 @@ run_app <- function(sqlite_base, cron_responses, credentials) {
   with_golem_options(
     app = shinyApp(
       ui = app_ui(), 
-      server = app_server
+      server = app_server,
+      onStart = function() {
+        onStop(function() {
+          cat("Doing application cleanup\n")
+          release <- limer::release_session_key()
+        })
+      }
     ), 
     golem_opts = list(sqlite_base = sqlite_base, cron_responses = cron_responses, credentials = credentials)
   )

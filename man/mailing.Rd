@@ -14,7 +14,8 @@ mailing(
   sleep,
   delete_survey = FALSE,
   progress = FALSE,
-  crowdsourcing = FALSE
+  crowdsourcing = FALSE,
+  session = TRUE
 )
 }
 \arguments{
@@ -37,6 +38,8 @@ mailing(
 \item{progress}{\dots}
 
 \item{crowdsourcing}{\dots}
+
+\item{session}{\dots}
 }
 \description{
 mailing
